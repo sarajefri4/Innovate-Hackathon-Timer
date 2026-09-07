@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hackathon Timer — Control</title>
+<style>
+  :root{
+    --bg:#080b12; --panel:#101623; --line:#1e2839; --fg:#eef3ff; --dim:#8595b4;
+    --ok:#34d399; --warn:#fbbf24; --danger:#fb7185; --brand:#2ee6b6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--fg);min-height:100vh;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
+    font-size:14px;-webkit-font-smoothing:antialiased;
+  }
+
+  /* ------------------------------------------------------------------ lock */
+  #lock{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;
+        align-items:center;justify-content:center;gap:18px;background:var(--bg);padding:24px}
+  #lock h1{font-size:15px;font-weight:600;letter-spacing:.34em;text-indent:.34em;color:var(--dim);text-transform:uppercase}
+  #keyInput{
+    width:min(340px,86vw);padding:16px;text-align:center;font-size:22px;font-weight:600;
+    letter-spacing:.35em;text-indent:.35em;text-transform:uppercase;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--fg);
+  }
+  #keyInput:focus{outline:none;border-color:var(--brand)}
+  #keyInput.bad{animation:shake .35s}
+  @keyframes shake{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+  #lockErr{color:var(--danger);font-size:13px;min-height:18px}
+
+  /* ------------------------------------------------------------------- app */
+  #app{display:none;max-width:1240px;margin:0 auto;padding:20px 18px 60px}
+  header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:18px}
+  h1.t{font-size:19px;font-weight:650;letter-spacing:-.01em}
+  .sub{color:var(--dim);font-size:12.5px;margin-top:2px}
+  .pill{display:inline-flex;align-items:center;gap:7px;background:var(--panel);
+        border:1px solid var(--line);border-radius:99px;padding:6px 13px;font-size:12px;color:var(--dim)}
+  .dot{width:7px;height:7px;border-radius:99px;background:var(--dim)}
+  .dot.live{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .dot.off{background:var(--danger)}
+
+  .grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px;align-items:start}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .card + .card{margin-top:14px}
+  h3{font-size:11px;font-weight:650;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row.tight{gap:7px}
+  .grow{flex:1;min-width:0}
+  .divider{height:1px;background:var(--line);margin:14px 0}
+
+  button{
+    background:#18202f;color:var(--fg);border:1px solid var(--line);border-radius:10px;
+    padding:10px 14px;font-size:13.5px;font-weight:550;cursor:pointer;font-family:inherit;
+    transition:background .12s,border-color .12s,transform .05s;
+  }
+  button:hover:not(:disabled){background:#1f2839;border-color:#33405a}
+  button:active:not(:disabled){transform:translateY(1px)}
+  button:disabled{opacity:.36;cursor:not-allowed}
+  button.primary{background:var(--brand);border-color:var(--brand);color:#04221b}
+  button.primary:hover:not(:disabled){background:#4af0c4}
+  button.amber{background:var(--warn);border-color:var(--warn);color:#221a02}
+  button.danger{background:transparent;border-color:#4a2532;color:var(--danger)}
+  button.big{padding:15px;font-size:15px}
+  button.on{background:var(--brand);border-color:var(--brand);color:#04221b}
+  button.mini{padding:7px 11px;font-size:12px}
+
+  input[type=text],input[type=number]{
+    background:#0b111c;border:1px solid var(--line);border-radius:9px;color:var(--fg);
+    padding:10px 12px;font-size:14px;font-family:inherit;width:100%;
+  }
+  input:focus{outline:none;border-color:var(--brand)}
+  label.f{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+  .field{margin-bottom:14px}
+  .hms{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .hms small{display:block;text-align:center;font-size:10px;letter-spacing:.14em;color:var(--dim);margin-top:5px}
+  code{background:#0b111c;border:1px solid var(--line);border-radius:8px;padding:9px 11px;
+       display:block;font-size:12.5px;color:var(--brand);word-break:break-all}
+  .kbd{margin-top:12px;font-size:11.5px;color:var(--dim)}
+  .kbd b{color:var(--fg);font-weight:600}
+
+  /* --------------------------------------------------------- screen picker */
+  .screens{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+  .screens button{
+    padding:0;overflow:hidden;display:flex;flex-direction:column;align-items:stretch;
+    background:#0b111c;border-radius:11px;text-align:left;
+  }
+  .screens img{width:100%;aspect-ratio:1/2.4;object-fit:cover;object-position:center 22%;opacity:.75}
+  .screens button.on img{opacity:1}
+  .screens span{padding:8px 9px;font-size:11.5px;line-height:1.3;color:var(--dim)}
+  .screens button.on{border-color:var(--brand)}
+  .screens button.on span{color:var(--fg)}
+
+  /* -------------------------------------------------------------- preview */
+  #preview{position:relative;width:100%;max-width:230px;margin:0 auto;border-radius:11px;overflow:hidden;background:#000}
+  #pvPlate{width:100%;display:block}
+  #preview .pslot{position:absolute}
+  #preview .pslot svg{width:100%;height:100%}
+  #preview .pslot path{fill:var(--pv,#fff)}
+  #pvState{display:flex;justify-content:space-between;gap:10px;margin-top:11px;
+           font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+  #pvClock{font-size:30px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.01em;margin-top:10px}
+
+  /* ---------------------------------------------------------------- toast */
+  #toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,140%);
+         background:var(--brand);color:#04221b;font-weight:650;font-size:13.5px;
+         padding:11px 20px;border-radius:99px;transition:transform .3s cubic-bezier(.2,.8,.2,1);z-index:30}
+  #toast.on{transform:translate(-50%,0)}
+  #toast.err{background:var(--danger);color:#210a10}
+  [hidden]{display:none !important}
+</style>
+</head>
+<body>
+
+<div id="lock">
+  <h1>Hackathon Timer</h1>
+  <input id="keyInput" type="password" placeholder="PASSKEY" autocomplete="off" autocapitalize="characters" spellcheck="false">
+  <div id="lockErr"></div>
+</div>
+
+<div id="app">
+  <header>
+    <div>
+      <h1 class="t">Hackathon Timer — Control</h1>
+      <div class="sub">Every change lands on all screens at once.</div>
+    </div>
+    <div class="row tight">
+      <span class="pill"><span class="dot" id="connDot"></span><span id="connTxt">connecting</span></span>
+      <span class="pill"><b id="screenCount" style="color:var(--fg)">0</b>&nbsp;screens</span>
+      <button class="mini" id="openDisplay">Open a display ↗</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- ------------------------------------------------------ live preview -->
+    <div>
+      <div class="card">
+        <h3>On screen now</h3>
+        <div id="preview"><img id="pvPlate" alt=""></div>
+        <div id="pvClock">--:--</div>
+        <div id="pvState"><span id="pvStatus"></span><span id="pvEnd"></span></div>
+        <div class="divider"></div>
+        <button style="width:100%" id="btnBlackout">Blackout all screens</button>
+      </div>
+
+      <div class="card">
+        <h3>Point screens here</h3>
+        <code id="displayUrl">…</code>
+        <div class="row tight" style="margin-top:10px">
+          <button class="grow mini" id="btnCopy">Copy link</button>
+          <button class="grow mini" id="btnCopyHd">Copy HD link</button>
+        </div>
+        <div class="sub" style="margin-top:9px">
+          A screen picks its own layout from its shape; the HD link forces the
+          landscape one.
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------------------------------------------------------- controls -->
+    <div>
+      <div class="card">
+        <h3>Program</h3>
+        <div class="row tight">
+          <button class="program grow" data-program="hacking">Hacking time</button>
+          <button class="program grow" data-program="presentation">Presentation time</button>
+        </div>
+      </div>
+
+      <!-- hacking set-up -->
+      <div class="card" id="hackSetup">
+        <h3>Challenge length</h3>
+        <div class="hms">
+          <div><input type="number" id="inH" min="0" max="99" value="6"><small>HOURS</small></div>
+          <div><input type="number" id="inM" min="0" max="59" value="30"><small>MINUTES</small></div>
+        </div>
+        <div class="row tight" style="margin-top:12px">
+          <button class="preset mini" data-ms="23400000">6 h 30</button>
+          <button class="preset mini" data-ms="28800000">8 h</button>
+          <button class="preset mini" data-ms="43200000">12 h</button>
+          <button class="preset mini" data-ms="86400000">24 h</button>
+        </div>
+        <button class="primary" style="width:100%;margin-top:12px" id="btnApplyHack">Set the clock</button>
+      </div>
+
+      <!-- presentation set-up -->
+      <div class="card" id="presSetup" hidden>
+        <h3>Running order</h3>
+        <div class="row tight" style="margin-bottom:14px">
+          <div class="grow"><label class="f">Demo (min)</label><input type="number" id="inDemo" min="0" max="120" value="5"></div>
+          <div class="grow"><label class="f">Judges (min)</label><input type="number" id="inJudges" min="0" max="120" value="5"></div>
+          <div class="grow"><label class="f">Teams</label><input type="number" id="inTeams" min="1" max="99" value="13"></div>
+        </div>
+        <button class="primary" style="width:100%" id="btnApplyPres">Apply</button>
+        <div class="divider"></div>
+        <div class="row" style="align-items:center;justify-content:space-between">
+          <button id="btnPrev">‹ Previous</button>
+          <div style="text-align:center">
+            <div style="font-size:17px;font-weight:650" id="segTitle">Team 1 — Demo</div>
+            <div class="sub" id="segSub">5:00 · 1 of 26</div>
+          </div>
+          <button id="btnNext">Next ›</button>
+        </div>
+      </div>
+
+      <!-- the clock -->
+      <div class="card">
+        <h3>Run the clock</h3>
+        <div class="row" style="margin-bottom:10px">
+          <button class="primary big grow" id="btnStart">▶ Start</button>
+          <button class="amber big grow" id="btnPause">⏸ Pause</button>
+        </div>
+        <div class="row tight" style="align-items:center">
+          <input type="number" id="inAdd" placeholder="Minutes" min="1" max="600" style="flex:0 0 120px">
+          <button class="grow" id="btnAdd">Add time</button>
+          <button class="grow" id="btnSubtract">Take off</button>
+        </div>
+        <div class="row tight" style="margin-top:8px">
+          <button class="grow mini" data-adjust="-300000">−5 min</button>
+          <button class="grow mini" data-adjust="-60000">−1 min</button>
+          <button class="grow mini" data-adjust="60000">+1 min</button>
+          <button class="grow mini" data-adjust="300000">+5 min</button>
+          <button class="grow mini" data-adjust="3600000">+1 hour</button>
+        </div>
+        <div class="divider"></div>
+        <div class="row tight">
+          <button class="grow" id="btnReset">↺ Reset to full</button>
+          <button class="danger grow" id="btnFinish">■ End now</button>
+        </div>
+        <div class="kbd"><b>Space</b> start / pause &nbsp;·&nbsp; <b>R</b> reset &nbsp;·&nbsp; <b>←</b> <b>→</b> ∓1 min</div>
+      </div>
+
+      <!-- screen selection -->
+      <div class="card">
+        <h3>Screen showing <span style="text-transform:none;letter-spacing:0;font-weight:400">— changing this never touches the clock</span></h3>
+        <div class="screens" id="screenPicker"></div>
+      </div>
+
+      <div class="card">
+        <h3>Message banner</h3>
+        <div class="row tight">
+          <input type="text" id="msgInput" placeholder="e.g. Lunch is served in the atrium" maxlength="280" style="flex:1;min-width:180px">
+          <button class="primary" id="btnMsg">Push</button>
+          <button id="btnMsgClear">Clear</button>
+        </div>
+        <div class="row tight" style="margin-top:9px">
+          <button class="quick mini">Submissions close in 30 minutes</button>
+          <button class="quick mini">Judging starts shortly — wrap up</button>
+          <button class="quick mini">Mentors available in Room 2</button>
+          <button class="quick mini">Push your code now!</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="/screen.js"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const clock = Screen7.createClock();
+
+  // ---- passkey -----------------------------------------------------------
+  // Kept in sessionStorage only, so closing the tab re-locks the console.
+  let KEY = sessionStorage.getItem('timerKey') || '';
+
+  async function post(url, body) {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ key: KEY }, body)),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.status === 401) { lockOut(); throw new Error(data.error || 'Unauthorised'); }
+    if (!r.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  }
+
+  function lockOut() {
+    sessionStorage.removeItem('timerKey');
+    KEY = '';
+    $('lock').style.display = 'flex';
+    $('app').style.display = 'none';
+    $('keyInput').value = '';
+    $('keyInput').focus();
+  }
+
+  // `silent` = a speculative attempt while the operator is still typing. Those
+  // must not clear the field or flash an error, or a longer custom passkey
+  // could never be typed out in full.
+  async function unlock(candidate, silent) {
+    try {
+      const r = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: candidate }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || 'Incorrect passkey');
+      KEY = candidate;
+      sessionStorage.setItem('timerKey', KEY);
+      $('lock').style.display = 'none';
+      $('app').style.display = 'block';
+      if (data.state) { apply(data.state); seedForm(data.state); }
+      connect();
+    } catch (e) {
+      if (silent) return;
+      $('lockErr').textContent = e.message;
+      $('keyInput').classList.add('bad');
+      setTimeout(() => $('keyInput').classList.remove('bad'), 400);
+      $('keyInput').value = '';
+    }
+  }
+
+  $('keyInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { $('lockErr').textContent = ''; unlock($('keyInput').value.trim().toUpperCase(), false); }
+  });
+  let tryTimer;
+  $('keyInput').addEventListener('input', (e) => {
+    $('lockErr').textContent = '';
+    const v = e.target.value.trim().toUpperCase();
+    clearTimeout(tryTimer);
+    if (v.length >= 4) tryTimer = setTimeout(() => unlock(v, true), 350);
+  });
+  if (KEY) unlock(KEY, true); else $('keyInput').focus();
+
+  // ---- artwork -----------------------------------------------------------
+  let screens = {}, menu = {}, state = null, current = null, pvSlots = [], pickerProgram = null;
+  fetch('/screens.json').then((r) => r.json()).then((d) => {
+    for (const s of d.screens) screens[s.id] = s;
+    menu = d.menu;
+    refreshScreens();
+  });
+
+  /** Keep the picker and the preview in step with whatever is showing. */
+  function refreshScreens() {
+    if (!state || !menu[state.program]) return;
+    if (pickerProgram !== state.program) { pickerProgram = state.program; buildPicker(); }
+    $('screenPicker').querySelectorAll('.screen').forEach((b) =>
+      b.classList.toggle('on', b.dataset.screen === state.screen));
+    paintPreview();
+  }
+
+  function buildPicker() {
+    const list = menu[state.program] || [];
+    $('screenPicker').innerHTML = list.map((id) => {
+      const s = screens[id];
+      return `<button class="screen" data-screen="${id}"><img src="/${s.src}" alt=""><span>${s.name}</span></button>`;
+    }).join('');
+    $('screenPicker').querySelectorAll('.screen').forEach((b) => {
+      b.onclick = () => control('screen', { screen: b.dataset.screen });
+    });
+  }
+
+  function paintPreview() {
+    const s = screens[state.screen];
+    if (!s || current === s) return;
+    current = s;
+    $('pvPlate').src = '/' + s.src;
+    $('preview').style.setProperty('--pv', s.accent);
+    $('preview').querySelectorAll('.pslot').forEach((n) => n.remove());
+    pvSlots = s.slots.map((slot) => {
+      const el = document.createElement('div');
+      el.className = 'pslot';
+      el.style.left = slot.x * 100 + '%';
+      el.style.top = slot.y * 100 + '%';
+      el.style.width = slot.w * 100 + '%';
+      el.style.height = slot.h * 100 + '%';
+      el.innerHTML = '<svg preserveAspectRatio="xMidYMid meet"><path/></svg>';
+      $('preview').appendChild(el);
+      return { slot, svg: el.querySelector('svg'), path: el.querySelector('path') };
+    });
+  }
+
+  // ---- live state ---------------------------------------------------------
+  let es = null, formTouched = false;
+
+  function connect() {
+    if (es) es.close();
+    es = new EventSource('/events?role=admin');
+    es.addEventListener('state', (e) => { apply(JSON.parse(e.data)); setConn(true); });
+    es.onopen = () => setConn(true);
+    es.onerror = () => {
+      setConn(false);
+      if (es.readyState === EventSource.CLOSED) setTimeout(connect, 1500);
+    };
+  }
+
+  function setConn(ok) {
+    $('connDot').className = 'dot ' + (ok ? 'live' : 'off');
+    $('connTxt').textContent = ok ? 'live' : 'offline';
+  }
+
+  function apply(s) {
+    state = s;
+
+    $('screenCount').textContent = s.displays;
+    $('btnBlackout').classList.toggle('on', s.blackout);
+    $('btnBlackout').textContent = s.blackout ? 'Blackout is ON' : 'Blackout all screens';
+
+    document.querySelectorAll('.program').forEach((b) =>
+      b.classList.toggle('on', b.dataset.program === s.program));
+    $('hackSetup').hidden = s.program !== 'hacking';
+    $('presSetup').hidden = s.program !== 'presentation';
+
+    const running = s.status === 'running';
+    $('btnStart').textContent = s.status === 'paused' ? '▶ Resume' : '▶ Start';
+    $('btnStart').disabled = running;
+    $('btnPause').disabled = !running;
+
+    if (s.program === 'presentation') {
+      const index = (s.team - 1) * 2 + (s.segment === 'judges' ? 1 : 0);
+      const len = s.segment === 'judges' ? s.judgesMs : s.demoMs;
+      $('segTitle').textContent = `Team ${s.team} — ${s.segment === 'judges' ? 'Judges' : 'Demo'}`;
+      $('segSub').textContent = `${fmt(len)} · ${index + 1} of ${s.teams * 2}`;
+      $('btnPrev').disabled = index === 0;
+      $('btnNext').disabled = index >= s.teams * 2 - 1;
+    }
+
+    refreshScreens();
+    if (!formTouched) seedForm(s);
+  }
+
+  function seedForm(s) {
+    const t = Math.round(s.hackMs / 1000);
+    $('inH').value = Math.floor(t / 3600);
+    $('inM').value = Math.round((t % 3600) / 60);
+    $('inDemo').value = Math.round(s.demoMs / 60000);
+    $('inJudges').value = Math.round(s.judgesMs / 60000);
+    $('inTeams').value = s.teams;
+    $('msgInput').value = s.message || '';
+  }
+  ['inH', 'inM', 'inDemo', 'inJudges', 'inTeams'].forEach((id) =>
+    $(id).addEventListener('input', () => { formTouched = true; }));
+
+  // ---- preview tick -------------------------------------------------------
+  function fmt(ms) {
+    const total = Math.ceil(ms / 1000);
+    const p = (n) => String(n).padStart(2, '0');
+    const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+    return h > 0 ? `${h}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`;
+  }
+
+  setInterval(() => {
+    if (!state || !current) return;
+    const ms = clock.remaining(state);
+    const done = state.status === 'finished';
+    const faces = Screen7.faces(ms, current.slots.length);
+
+    pvSlots.forEach((s, i) => {
+      const face = faces[i];
+      if (!face) return;
+      const shape = Screen7.digitsSVG(done ? '00' : face.v, s.slot.gap, 2);
+      s.svg.setAttribute('viewBox', shape.viewBox);
+      s.path.setAttribute('d', shape.d);
+    });
+
+    $('pvClock').textContent = done ? "TIME'S UP" : fmt(ms);
+    $('pvClock').style.color = done ? 'var(--danger)'
+      : state.status !== 'running' ? '#7dd3fc'
+      : ms <= 60000 ? 'var(--danger)'
+      : ms <= 5 * 60000 ? 'var(--warn)' : 'var(--ok)';
+
+    const nice = { idle: 'Ready', running: 'Running', paused: 'Paused', finished: 'Finished' };
+    $('pvStatus').textContent = nice[state.status];
+    $('pvEnd').textContent = state.status === 'running' && state.endsAt
+      ? 'ends ' + new Date(state.endsAt - clock.offset).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : '';
+  }, 100);
+
+  // ---- toast --------------------------------------------------------------
+  let toastTimer;
+  function toast(msg, isErr) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.className = 'on' + (isErr ? ' err' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => (t.className = ''), 2200);
+  }
+
+  async function control(action, payload, note) {
+    try {
+      await post('/api/control', { action, payload });
+      if (note) toast(note);
+    } catch (e) {
+      toast(e.message, true);
+    }
+  }
+
+  // ---- wiring -------------------------------------------------------------
+  document.querySelectorAll('.program').forEach((b) => {
+    b.onclick = () => control('program', { program: b.dataset.program },
+      b.dataset.program === 'hacking' ? 'Hacking time' : 'Presentation time');
+  });
+
+  const hackMs = () => (+$('inH').value || 0) * 3600000 + (+$('inM').value || 0) * 60000;
+
+  $('btnApplyHack').onclick = () => {
+    const d = hackMs();
+    if (d <= 0) return toast('Set a length above zero', true);
+    formTouched = false;
+    control('configure', { hackMs: d }, 'Clock set to ' + fmt(d));
+  };
+
+  $('btnApplyPres').onclick = () => {
+    formTouched = false;
+    control('configure', {
+      demoMs: (+$('inDemo').value || 0) * 60000,
+      judgesMs: (+$('inJudges').value || 0) * 60000,
+      teams: +$('inTeams').value || 1,
+    }, 'Running order updated');
+  };
+  $('btnPrev').onclick = () => control('advance', { dir: -1 });
+  $('btnNext').onclick = () => control('advance', { dir: 1 });
+
+  $('btnStart').onclick = () => {
+    // An unapplied length in the set-up panel is almost always what the
+    // operator means to start, so fold it in rather than ignoring it.
+    if (formTouched && state.program === 'hacking') {
+      const d = hackMs();
+      if (d <= 0) return toast('Set a length above zero', true);
+      formTouched = false;
+      return control('configure', { hackMs: d }).then(() => control('start', {}, 'Started on all screens'));
+    }
+    control('start', {}, state.status === 'paused' ? 'Resumed on all screens' : 'Started on all screens');
+  };
+  $('btnPause').onclick = () => control('pause', {}, 'Paused on all screens');
+  $('btnReset').onclick = () => control('reset', {}, 'Reset to full');
+  $('btnFinish').onclick = () => {
+    if (confirm("End the timer now? Every screen will show TIME'S UP.")) control('finish', {}, 'Timer ended');
+  };
+  $('btnBlackout').onclick = () => control('blackout', { blackout: !(state && state.blackout) });
+
+  const typedMinutes = () => {
+    const m = +$('inAdd').value;
+    return Number.isFinite(m) && m > 0 ? m : null;
+  };
+  function addTime(sign) {
+    const m = typedMinutes();
+    if (m === null) return toast('Type a number of minutes first', true);
+    control('adjust', { deltaMs: sign * m * 60000 }, (sign > 0 ? '+' : '−') + m + ' min on every screen');
+    $('inAdd').value = '';
+  }
+  $('btnAdd').onclick = () => addTime(1);
+  $('btnSubtract').onclick = () => addTime(-1);
+  $('inAdd').addEventListener('keydown', (e) => { if (e.key === 'Enter') addTime(1); });
+
+  document.querySelectorAll('[data-adjust]').forEach((b) => {
+    b.onclick = () => {
+      const d = +b.dataset.adjust;
+      control('adjust', { deltaMs: d }, (d > 0 ? '+' : '−') + fmt(Math.abs(d)));
+    };
+  });
+
+  document.querySelectorAll('.preset').forEach((b) => {
+    b.onclick = () => {
+      const t = +b.dataset.ms / 1000;
+      $('inH').value = Math.floor(t / 3600);
+      $('inM').value = Math.round((t % 3600) / 60);
+      formTouched = true;
+    };
+  });
+
+  const pushMsg = () => control('message', { message: $('msgInput').value.trim() },
+    $('msgInput').value.trim() ? 'Banner pushed' : 'Banner cleared');
+  $('btnMsg').onclick = pushMsg;
+  $('msgInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') pushMsg(); });
+  $('btnMsgClear').onclick = () => { $('msgInput').value = ''; control('message', { message: '' }, 'Banner cleared'); };
+  document.querySelectorAll('.quick').forEach((b) => {
+    b.onclick = () => { $('msgInput').value = b.textContent; pushMsg(); };
+  });
+
+  const displayUrl = location.origin + '/display';
+  $('displayUrl').textContent = displayUrl;
+  $('openDisplay').onclick = () => window.open(displayUrl, '_blank');
+  const copy = async (url) => {
+    try { await navigator.clipboard.writeText(url); toast('Link copied'); }
+    catch { toast(url); }
+  };
+  $('btnCopy').onclick = () => copy(displayUrl);
+  $('btnCopyHd').onclick = () => copy(displayUrl + '?mode=hd');
+
+  // Shortcuts, but never while the operator is typing in a field.
+  document.addEventListener('keydown', (e) => {
+    if ($('app').style.display === 'none') return;
+    if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+    if (e.key === ' ') { e.preventDefault(); (state && state.status === 'running' ? $('btnPause') : $('btnStart')).click(); }
+    if (e.key.toLowerCase() === 'r') $('btnReset').click();
+    if (e.key === 'ArrowRight') control('adjust', { deltaMs: 60000 }, '+1 min');
+    if (e.key === 'ArrowLeft') control('adjust', { deltaMs: -60000 }, '−1 min');
+  });
+})();
+</script>
+</body>
+</html>

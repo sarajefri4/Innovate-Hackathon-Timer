@@ -1,0 +1,482 @@
+{
+ "version": 1,
+ "screens": [
+  {
+   "id": "hold",
+   "source": "coloum-screen-01.jpg",
+   "program": "both",
+   "name": "Holding screen",
+   "src": "screens/hold.jpg",
+   "bg": "screens/hold-bg.jpg",
+   "w": 1440,
+   "h": 6479,
+   "accent": "#ffffff",
+   "slots": [],
+   "crops": {
+    "lockup": {
+     "src": "screens/hold-lockup.png",
+     "ratio": 1.1673151750972763
+    },
+    "hero": {
+     "src": "screens/hold-hero.jpg",
+     "ratio": 0.7086614173228346
+    },
+    "headline": {
+     "src": "screens/hold-headline.png",
+     "ratio": 0.4493260109835247
+    }
+   }
+  },
+  {
+   "id": "started",
+   "source": "coloum-screen-02.jpg",
+   "program": "hacking",
+   "name": "Challenge started",
+   "src": "screens/started.jpg",
+   "bg": "screens/started-bg.jpg",
+   "w": 1440,
+   "h": 6479,
+   "accent": "#feffff",
+   "slots": [
+    {
+     "unit": "hours",
+     "x": 0.2742663656884876,
+     "y": 0.4688323090430202,
+     "w": 0.42776523702031605,
+     "h": 0.0767590618336887,
+     "gap": 0.07651715039577836,
+     "label": {
+      "x": 0.38148984198645597,
+      "y": 0.5676658723190768,
+      "w": 0.24379232505643342,
+      "h": 0.01141352063213345,
+      "colour": "#ffffff",
+      "patch": "screens/started-label0.jpg",
+      "patchX": 0.3515801354401806,
+      "patchY": 0.5617709770475354,
+      "patchW": 0.3036117381489842,
+      "patchH": 0.023203311175216356
+     }
+    },
+    {
+     "unit": "minutes",
+     "x": 0.2793453724604966,
+     "y": 0.6231029725322965,
+     "w": 0.4260722347629797,
+     "h": 0.07688448513733852,
+     "gap": 0.0728476821192053,
+     "label": {
+      "x": 0.36738148984198643,
+      "y": 0.7225636523266022,
+      "w": 0.30756207674943564,
+      "h": 0.011538943935783268,
+      "colour": "#ffffff",
+      "patch": "screens/started-label1.jpg",
+      "patchX": 0.33747178329571104,
+      "patchY": 0.7166687570550608,
+      "patchW": 0.36738148984198643,
+      "patchH": 0.023328734478866173
+     }
+    }
+   ],
+   "crops": {
+    "lockup": {
+     "src": "screens/started-lockup.png",
+     "ratio": 1.2096774193548387
+    },
+    "headline": {
+     "src": "screens/started-headline.png",
+     "ratio": 0.6164383561643836
+    },
+    "tagline": {
+     "src": "screens/started-tagline.png",
+     "ratio": 1.291248206599713
+    }
+   }
+  },
+  {
+   "id": "mentoring1",
+   "source": "coloum-screen-03.jpg",
+   "program": "hacking",
+   "name": "Mentoring round 1",
+   "src": "screens/mentoring1.jpg",
+   "bg": "screens/mentoring1-bg.jpg",
+   "w": 1440,
+   "h": 6479,
+   "accent": "#ffffff",
+   "slots": [
+    {
+     "unit": "hours",
+     "x": 0.2708803611738149,
+     "y": 0.4688323090430202,
+     "w": 0.4272009029345372,
+     "h": 0.0767590618336887,
+     "gap": 0.07529722589167767,
+     "label": {
+      "x": 0.3775395033860045,
+      "y": 0.5676658723190768,
+      "w": 0.2443566591422122,
+      "h": 0.01141352063213345,
+      "colour": "#ffffff",
+      "patch": "screens/mentoring1-label0.jpg",
+      "patchX": 0.3476297968397291,
+      "patchY": 0.5617709770475354,
+      "patchW": 0.304176072234763,
+      "patchH": 0.023203311175216356
+     }
+    },
+    {
+     "unit": "minutes",
+     "x": 0.27539503386004516,
+     "y": 0.6231029725322965,
+     "w": 0.4260722347629797,
+     "h": 0.07688448513733852,
+     "gap": 0.0728476821192053,
+     "label": {
+      "x": 0.3639954853273138,
+      "y": 0.7225636523266022,
+      "w": 0.30699774266365687,
+      "h": 0.011538943935783268,
+      "colour": "#fefffe",
+      "patch": "screens/mentoring1-label1.jpg",
+      "patchX": 0.3340857787810384,
+      "patchY": 0.7166687570550608,
+      "patchW": 0.36681715575620766,
+      "patchH": 0.023328734478866173
+     }
+    }
+   ],
+   "crops": {
+    "lockup": {
+     "src": "screens/mentoring1-lockup.png",
+     "ratio": 1.2096774193548387
+    },
+    "headline": {
+     "src": "screens/mentoring1-headline.png",
+     "ratio": 0.7177033492822966
+    },
+    "tagline": {
+     "src": "screens/mentoring1-tagline.png",
+     "ratio": 1.267605633802817
+    }
+   }
+  },
+  {
+   "id": "build",
+   "source": "coloum-screen-04.jpg",
+   "program": "hacking",
+   "name": "Build and develop",
+   "src": "screens/build.jpg",
+   "bg": "screens/build-bg.jpg",
+   "w": 1440,
+   "h": 6479,
+   "accent": "#feffff",
+   "slots": [
+    {
+     "unit": "hours",
+     "x": 0.2742663656884876,
+     "y": 0.4688323090430202,
+     "w": 0.42776523702031605,
+     "h": 0.0767590618336887,
+     "gap": 0.07651715039577836,
+     "label": {
+      "x": 0.38148984198645597,
+      "y": 0.5676658723190768,
+      "w": 0.24379232505643342,
+      "h": 0.01141352063213345,
+      "colour": "#ffffff",
+      "patch": "screens/build-label0.jpg",
+      "patchX": 0.3515801354401806,
+      "patchY": 0.5617709770475354,
+      "patchW": 0.3036117381489842,
+      "patchH": 0.023203311175216356
+     }
+    },
+    {
+     "unit": "minutes",
+     "x": 0.2793453724604966,
+     "y": 0.6231029725322965,
+     "w": 0.4260722347629797,
+     "h": 0.07688448513733852,
+     "gap": 0.0728476821192053,
+     "label": {
+      "x": 0.36738148984198643,
+      "y": 0.7225636523266022,
+      "w": 0.30756207674943564,
+      "h": 0.011538943935783268,
+      "colour": "#ffffff",
+      "patch": "screens/build-label1.jpg",
+      "patchX": 0.33747178329571104,
+      "patchY": 0.7166687570550608,
+      "patchW": 0.36738148984198643,
+      "patchH": 0.023328734478866173
+     }
+    }
+   ],
+   "crops": {
+    "lockup": {
+     "src": "screens/build-lockup.png",
+     "ratio": 1.2096774193548387
+    },
+    "headline": {
+     "src": "screens/build-headline.png",
+     "ratio": 0.6433166547533953
+    },
+    "tagline": {
+     "src": "screens/build-tagline.png",
+     "ratio": 1.5151515151515151
+    }
+   }
+  },
+  {
+   "id": "mentoring2",
+   "source": "coloum-screen-05.jpg",
+   "program": "hacking",
+   "name": "Mentoring round 2",
+   "src": "screens/mentoring2.jpg",
+   "bg": "screens/mentoring2-bg.jpg",
+   "w": 1440,
+   "h": 6479,
+   "accent": "#fc9f54",
+   "slots": [
+    {
+     "unit": "hours",
+     "x": 0.2703160270880361,
+     "y": 0.4688323090430202,
+     "w": 0.42776523702031605,
+     "h": 0.07663363853003888,
+     "gap": 0.07651715039577836,
+     "label": {
+      "x": 0.3775395033860045,
+      "y": 0.5676658723190768,
+      "w": 0.2443566591422122,
+      "h": 0.01141352063213345,
+      "colour": "#fd9e55",
+      "patch": "screens/mentoring2-label0.jpg",
+      "patchX": 0.3476297968397291,
+      "patchY": 0.5617709770475354,
+      "patchW": 0.304176072234763,
+      "patchH": 0.023203311175216356
+     }
+    },
+    {
+     "unit": "minutes",
+     "x": 0.27539503386004516,
+     "y": 0.6232283958359464,
+     "w": 0.4260722347629797,
+     "h": 0.07663363853003888,
+     "gap": 0.0728476821192053,
+     "label": {
+      "x": 0.3639954853273138,
+      "y": 0.7139094443747648,
+      "w": 0.3955981941309255,
+      "h": 0.023955850997115263,
+      "colour": "#fd9e55",
+      "patch": "screens/mentoring2-label1.jpg",
+      "patchX": 0.3340857787810384,
+      "patchY": 0.7080145491032234,
+      "patchW": 0.4554176072234763,
+      "patchH": 0.035745641540198166
+     }
+    }
+   ],
+   "crops": {
+    "lockup": {
+     "src": "screens/mentoring2-lockup.png",
+     "ratio": 1.2096774193548387
+    },
+    "headline": {
+     "src": "screens/mentoring2-headline.png",
+     "ratio": 0.7137192704203014
+    },
+    "tagline": {
+     "src": "screens/mentoring2-tagline.png",
+     "ratio": 1.1083743842364533
+    }
+   }
+  },
+  {
+   "id": "prototype",
+   "source": "coloum-screen-06.jpg",
+   "program": "hacking",
+   "name": "Prototype mode",
+   "src": "screens/prototype.jpg",
+   "bg": "screens/prototype-bg.jpg",
+   "w": 1440,
+   "h": 6479,
+   "accent": "#e93867",
+   "slots": [
+    {
+     "unit": "hours",
+     "x": 0.2742663656884876,
+     "y": 0.4688323090430202,
+     "w": 0.42776523702031605,
+     "h": 0.07663363853003888,
+     "gap": 0.07651715039577836,
+     "label": {
+      "x": 0.38148984198645597,
+      "y": 0.5676658723190768,
+      "w": 0.24379232505643342,
+      "h": 0.01141352063213345,
+      "colour": "#ea3966",
+      "patch": "screens/prototype-label0.jpg",
+      "patchX": 0.3515801354401806,
+      "patchY": 0.5617709770475354,
+      "patchW": 0.3036117381489842,
+      "patchH": 0.023203311175216356
+     }
+    },
+    {
+     "unit": "minutes",
+     "x": 0.27878103837471785,
+     "y": 0.6232283958359464,
+     "w": 0.42663656884875845,
+     "h": 0.07663363853003888,
+     "gap": 0.07407407407407407,
+     "label": {
+      "x": 0.36738148984198643,
+      "y": 0.7225636523266022,
+      "w": 0.30756207674943564,
+      "h": 0.011538943935783268,
+      "colour": "#ea3966",
+      "patch": "screens/prototype-label1.jpg",
+      "patchX": 0.33747178329571104,
+      "patchY": 0.7166687570550608,
+      "patchW": 0.36738148984198643,
+      "patchH": 0.023328734478866173
+     }
+    }
+   ],
+   "crops": {
+    "lockup": {
+     "src": "screens/prototype-lockup.png",
+     "ratio": 1.2096774193548387
+    },
+    "headline": {
+     "src": "screens/prototype-headline.png",
+     "ratio": 0.7867132867132867
+    },
+    "tagline": {
+     "src": "screens/prototype-tagline.png",
+     "ratio": 1.2362637362637363
+    }
+   }
+  },
+  {
+   "id": "demo",
+   "source": "coloum-screen(Teams)-01.jpg",
+   "program": "presentation",
+   "name": "Demo time",
+   "src": "screens/demo.jpg",
+   "bg": "screens/demo-bg.jpg",
+   "w": 1440,
+   "h": 6479,
+   "accent": "#ffffff",
+   "slots": [
+    {
+     "unit": "minutes",
+     "x": 0.15519187358916478,
+     "y": 0.404113884359714,
+     "w": 0.6642212189616253,
+     "h": 0.11952840837827669,
+     "gap": 0.07391673746813934,
+     "label": {
+      "x": 0.29288939051918733,
+      "y": 0.5590116643672395,
+      "w": 0.4785553047404063,
+      "h": 0.017935532421923993,
+      "colour": "#ffffff",
+      "patch": "screens/demo-label0.jpg",
+      "patchX": 0.26297968397291194,
+      "patchY": 0.553116769095698,
+      "patchW": 0.5383747178329571,
+      "patchH": 0.0297253229650069
+     }
+    }
+   ],
+   "crops": {
+    "lockup": {
+     "src": "screens/demo-lockup.png",
+     "ratio": 1.2295081967213115
+    },
+    "headline": {
+     "src": "screens/demo-headline.png",
+     "ratio": 1.3719512195121952
+    },
+    "tagline": {
+     "src": "screens/demo-tagline.png",
+     "ratio": 0.783289817232376
+    }
+   }
+  },
+  {
+   "id": "judges",
+   "source": "coloum-screen(Teams)-02.jpg",
+   "program": "presentation",
+   "name": "Judges time",
+   "src": "screens/judges.jpg",
+   "bg": "screens/judges-bg.jpg",
+   "w": 1440,
+   "h": 6479,
+   "accent": "#ffffff",
+   "slots": [
+    {
+     "unit": "minutes",
+     "x": 0.15011286681715574,
+     "y": 0.404113884359714,
+     "w": 0.6636568848758465,
+     "h": 0.11952840837827669,
+     "gap": 0.07312925170068027,
+     "label": {
+      "x": 0.2878103837471783,
+      "y": 0.5590116643672395,
+      "w": 0.4785553047404063,
+      "h": 0.017935532421923993,
+      "colour": "#ffffff",
+      "patch": "screens/judges-label0.jpg",
+      "patchX": 0.25790067720090293,
+      "patchY": 0.553116769095698,
+      "patchW": 0.5383747178329571,
+      "patchH": 0.0297253229650069
+     }
+    }
+   ],
+   "crops": {
+    "lockup": {
+     "src": "screens/judges-lockup.png",
+     "ratio": 1.2096774193548387
+    },
+    "headline": {
+     "src": "screens/judges-headline.png",
+     "ratio": 1.2345679012345678
+    },
+    "tagline": {
+     "src": "screens/judges-tagline.png",
+     "ratio": 0.8450704225352113
+    }
+   }
+  },
+  {
+   "id": "teams",
+   "source": "coloum-screen(Teams)-03.jpg",
+   "program": "presentation",
+   "name": "Teams branding",
+   "src": "screens/teams.jpg",
+   "bg": "screens/teams-bg.jpg",
+   "w": 1440,
+   "h": 6479,
+   "accent": "#ffffff",
+   "slots": [],
+   "crops": {
+    "lockup": {
+     "src": "screens/teams-lockup.png",
+     "ratio": 1.4887780548628429
+    },
+    "hero": {
+     "src": "screens/teams-hero.jpg",
+     "ratio": 0.4396678065461651
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hackathon Timer</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#000;overflow:hidden}
+  body{
+    font-family:"Helvetica Neue",Helvetica,Arial,"Segoe UI",system-ui,sans-serif;
+    color:#fff; cursor:none; -webkit-font-smoothing:antialiased;
+  }
+  body.show-cursor{cursor:default}
+  img{display:block}
+  [hidden]{display:none !important}
+
+  /* ---------------------------------------------------------- column screen */
+  /* The plate is letterboxed rather than cropped, and every live element is
+     positioned against the plate's own box — so the digits land exactly where
+     the designed ones were, whatever the screen's true aspect ratio. */
+  #stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+  #plateBox{position:relative;height:100%;max-width:100%}
+  #plateBox.fitW{width:100%;height:auto}
+  #plate{width:100%;height:100%;object-fit:contain}
+
+  .slot{position:absolute}
+  .slot svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 var(--halo,6px) var(--glow,transparent))}
+  .slot svg path{fill:var(--accent)}
+  .patch{position:absolute;width:100%;height:100%;left:0;top:0}
+  /* Stands in for the artwork's own unit word when the countdown changes unit.
+     The designed face is a condensed light grotesque; a light system grotesque
+     squeezed to 0.845 matches its width and colour closely enough that the two
+     are indistinguishable at any viewing distance a wall implies. */
+  .unit{
+    position:absolute;left:50%;top:50%;
+    transform:translate(-50%,calc(-50% + .08em)) scaleX(.845);
+    white-space:nowrap;font-weight:300;line-height:1;
+    letter-spacing:.10em;text-indent:.10em;
+  }
+
+  /* A slow breath in the last minute: noticeable across a hall, not a strobe. */
+  @keyframes breathe{0%,100%{opacity:1}50%{opacity:.35}}
+  .urgent{animation:breathe 1s ease-in-out infinite}
+
+  /* -------------------------------------------------------------- HD screen */
+  /* A 16:9 screen cannot show a 1:4.5 column, so the landscape layout takes the
+     artwork apart and re-composes it: the headline and tagline stack down one
+     side, the clock takes the other. The pieces are alpha cut-outs, so they sit
+     on this backdrop with no seam. */
+  #hd{position:absolute;inset:0;display:none;flex-direction:column;padding:4vh 4vw;background:#020605}
+  body.hd #hd{display:flex}
+  body.hd #stage{display:none}
+  #hdBg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+        filter:blur(70px) saturate(1.25);opacity:.85;transform:scale(1.25)}
+  #hdScrim{position:absolute;inset:0;background:
+      radial-gradient(ellipse 70% 60% at 50% 45%,rgba(0,0,0,.15),rgba(0,0,0,.72))}
+  #hdTop{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:2vw}
+  #hdLockup{height:19vh;width:auto;max-width:26vw;object-fit:contain;object-position:left top}
+  #hdTeam{
+    font-size:2.1vh;font-weight:300;letter-spacing:.32em;text-indent:.32em;
+    padding:1vh 1.5vw;border:1px solid rgba(255,255,255,.22);border-radius:99px;
+    color:#fff;opacity:.85;white-space:nowrap;
+  }
+  #hdBody{position:relative;z-index:1;flex:1;min-height:0;display:flex;align-items:center;gap:5vw;padding-top:2vh}
+  #hdLeft{flex:0 0 32%;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3.5vh;min-width:0}
+  #hdHeadline{max-height:46vh;max-width:100%;width:auto}
+  #hdTagline{max-height:17vh;max-width:100%;width:auto}
+  #hdRight{flex:1;display:flex;align-items:center;justify-content:center;min-width:0}
+  /* A screen with no countdown puts its picture where the clock would go. */
+  /* The picture keeps its own ground, so its edges are faded into the page
+     rather than cut out. */
+  #hdHero{max-height:66vh;max-width:100%;width:auto;
+    -webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 34%,transparent 100%);
+    mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 34%,transparent 100%)}
+  body.noclock #hdClock,body.noclock #hdDone{display:none}
+  body.noclock #hdLeft.empty{display:none}
+
+  #hdClock{display:flex;align-items:flex-start;justify-content:center;gap:4vw}
+  #hdClock .grp{display:flex;flex-direction:column;align-items:center;gap:2vh}
+  #hdClock svg{height:34vh;width:auto;overflow:visible;filter:drop-shadow(0 0 1.4vh var(--glow,transparent))}
+  #hdClock svg path{fill:var(--accent)}
+  #hdClock .lbl{font-size:2.3vh;font-weight:300;letter-spacing:.34em;text-indent:.34em;
+                color:var(--accent);opacity:.7}
+  #hdDone{font-size:8vh;font-weight:300;letter-spacing:.2em;text-indent:.2em;color:var(--accent)}
+
+  /* ----------------------------------------------------------------- chrome */
+  #message{
+    position:fixed;left:0;right:0;bottom:0;z-index:6;
+    background:rgba(255,255,255,.94);color:#07110f;
+    font-size:clamp(15px,2.4vw,38px);font-weight:600;
+    padding:1.4vh 4vw;text-align:center;
+    transform:translateY(101%);transition:transform .45s cubic-bezier(.2,.8,.2,1);
+  }
+  #message.on{transform:translateY(0)}
+  #offline{
+    position:fixed;top:0;left:0;right:0;z-index:7;
+    background:#f43f5e;color:#fff;font-weight:700;letter-spacing:.18em;
+    text-transform:uppercase;font-size:clamp(9px,1.1vw,15px);text-align:center;
+    padding:.9vh 2vw;transform:translateY(-101%);transition:transform .3s ease;
+  }
+  #offline.on{transform:translateY(0)}
+  #hint{
+    position:fixed;bottom:1.4vh;right:1.6vw;z-index:5;
+    font-size:clamp(9px,1vw,14px);color:rgba(255,255,255,.5);
+    opacity:0;transition:opacity .4s;letter-spacing:.1em;
+  }
+  #hint.on{opacity:1}
+  body.blackout #stage,body.blackout #hd,body.blackout #message{opacity:0;transition:opacity .6s}
+</style>
+</head>
+<body>
+<div id="offline">Reconnecting to timer server…</div>
+
+<div id="stage"><div id="plateBox"><img id="plate" alt=""></div></div>
+
+<div id="hd">
+  <img id="hdBg" alt=""><div id="hdScrim"></div>
+  <div id="hdTop"><img id="hdLockup" alt=""><div id="hdTeam" hidden></div></div>
+  <div id="hdBody">
+    <div id="hdLeft">
+      <img id="hdHeadline" alt="">
+      <img id="hdTagline" alt="">
+    </div>
+    <div id="hdRight">
+      <div id="hdClock"></div>
+      <div id="hdDone" hidden>TIME'S UP</div>
+      <img id="hdHero" alt="">
+    </div>
+  </div>
+</div>
+
+<div id="message"></div>
+<div id="hint">F — fullscreen · S — sound · C / H — layout</div>
+
+<script src="/screen.js"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const clock = Screen7.createClock();
+
+  // ---- layout ------------------------------------------------------------
+  // A column screen is extremely tall (the artwork is 1:4.5). Anything squarer
+  // than roughly 2:1 gets the landscape composition instead. ?mode= overrides.
+  const forced = new URLSearchParams(location.search).get('mode');
+  let mode = forced === 'hd' || forced === 'column' ? forced : null;
+
+  function chooseMode() {
+    if (mode) return mode;
+    return innerHeight / innerWidth >= 2.2 ? 'column' : 'hd';
+  }
+  function applyMode() {
+    document.body.classList.toggle('hd', chooseMode() === 'hd');
+    fitPlate();
+  }
+  addEventListener('resize', applyMode);
+
+  // ---- artwork -----------------------------------------------------------
+  let screens = {}, state = null, current = null;
+  let slotEls = [];
+
+  fetch('/screens.json').then((r) => r.json()).then((d) => {
+    for (const s of d.screens) screens[s.id] = s;
+    // Warm the cache so switching screens is instant on the night.
+    for (const s of d.screens) { const i = new Image(); i.src = '/' + s.src; }
+    if (state) paint();
+  });
+
+  function fitPlate() {
+    const s = current;
+    if (!s) return;
+    // Match the letterbox: if the viewport is wider than the plate's aspect,
+    // the plate is height-bound, otherwise width-bound.
+    const box = $('plateBox');
+    const tall = innerWidth / innerHeight < s.w / s.h;
+    box.classList.toggle('fitW', tall);
+    box.style.width = tall ? '100%' : (innerHeight * s.w / s.h) + 'px';
+    box.style.height = tall ? (innerWidth * s.h / s.w) + 'px' : '100%';
+    const h = box.getBoundingClientRect().height;
+    box.style.setProperty('--halo', (h * 0.0012) + 'px');
+    // Cap height of the designed word, turned into a font size.
+    for (const el of slotEls) {
+      if (el.label) el.label.querySelector('.unit').style.fontSize = (h * el.slot.label.h / 0.72) + 'px';
+    }
+  }
+
+  /** Rebuild the live overlays for whichever screen is showing. */
+  function paint() {
+    const s = screens[state.screen];
+    if (!s) return;
+    if (current !== s) {
+      current = s;
+      $('plate').src = '/' + s.src;
+      $('hdBg').src = '/' + s.bg;
+      const rgb = s.accent.match(/\w\w/g).map((h) => parseInt(h, 16)).join(',');
+      document.documentElement.style.setProperty('--accent', s.accent);
+      document.documentElement.style.setProperty('--glow', `rgba(${rgb},.4)`);
+      document.body.classList.toggle('noclock', s.slots.length === 0);
+      setCrop('hdLockup', s.crops.lockup);
+      setCrop('hdHeadline', s.crops.headline);
+      setCrop('hdTagline', s.crops.tagline);
+      setCrop('hdHero', s.crops.hero);
+      $('hdLeft').classList.toggle('empty', !s.crops.headline && !s.crops.tagline);
+      buildSlots(s);
+      buildHdClock(s);
+      fitPlate();
+    }
+    tick();
+  }
+
+  function setCrop(id, crop) {
+    const el = $(id);
+    if (crop) { el.src = '/' + crop.src; el.hidden = false; }
+    else { el.removeAttribute('src'); el.hidden = true; }
+  }
+
+  function buildSlots(s) {
+    const box = $('plateBox');
+    box.querySelectorAll('.slot').forEach((n) => n.remove());
+    slotEls = s.slots.map((slot) => {
+      const el = document.createElement('div');
+      el.className = 'slot';
+      el.style.left = slot.x * 100 + '%';
+      el.style.top = slot.y * 100 + '%';
+      el.style.width = slot.w * 100 + '%';
+      el.style.height = slot.h * 100 + '%';
+      el.innerHTML = '<svg preserveAspectRatio="xMidYMid meet"><path/></svg>';
+      box.appendChild(el);
+
+      let label = null;
+      if (slot.label) {
+        label = document.createElement('div');
+        label.className = 'slot';
+        label.style.left = slot.label.patchX * 100 + '%';
+        label.style.top = slot.label.patchY * 100 + '%';
+        label.style.width = slot.label.patchW * 100 + '%';
+        label.style.height = slot.label.patchH * 100 + '%';
+        label.hidden = true;
+        label.innerHTML = '<img class="patch" src="/' + slot.label.patch + '" alt="">'
+          + '<div class="unit" style="color:' + (slot.label.colour || s.accent) + '"></div>';
+        box.appendChild(label);
+      }
+      return { slot, el, svg: el.querySelector('svg'), path: el.querySelector('path'), label };
+    });
+  }
+
+  function buildHdClock(s) {
+    $('hdClock').innerHTML = s.slots.map(() =>
+      '<div class="grp"><svg preserveAspectRatio="xMidYMid meet"><path/></svg><div class="lbl"></div></div>'
+    ).join('');
+  }
+
+  // ---- the tick ----------------------------------------------------------
+  let lastSecond = null;
+
+  function tick() {
+    if (!state || !current) return;
+    const ms = clock.remaining(state);
+    const done = state.status === 'finished';
+    const live = state.status === 'running';
+    const faces = Screen7.faces(ms, current.slots.length);
+    const urgent = live && ms > 0 && ms <= 60000;
+
+    document.body.classList.toggle('blackout', !!state.blackout);
+
+    slotEls.forEach((s, i) => {
+      const face = faces[i];
+      if (!face) return;
+      const v = done ? '00' : face.v;
+      // Cheap TV browsers appreciate not re-laying out the same digits 20×/s.
+      if (s.shown !== v) {
+        s.shown = v;
+        const shape = Screen7.digitsSVG(v, s.slot.gap, 2);
+        s.svg.setAttribute('viewBox', shape.viewBox);
+        s.path.setAttribute('d', shape.d);
+      }
+      s.el.classList.toggle('urgent', urgent);
+      // The unit words are part of the artwork. Only when the countdown has to
+      // change unit do we cover them and set our own.
+      if (s.label) {
+        const baked = s.slot.unit.toUpperCase();
+        const swap = face.unit !== baked;
+        s.label.hidden = !swap;
+        if (swap) s.label.querySelector('.unit').textContent = face.unit;
+      }
+    });
+
+    // Landscape composition.
+    const groups = $('hdClock').children;
+    for (let i = 0; i < groups.length; i++) {
+      const face = faces[i];
+      if (!face) continue;
+      const v = done ? '00' : face.v;
+      const svg = groups[i].querySelector('svg');
+      if (svg.dataset.shown !== v) {
+        svg.dataset.shown = v;
+        const shape = Screen7.digitsSVG(v, current.slots[i].gap, 2);
+        svg.setAttribute('viewBox', shape.viewBox);
+        svg.querySelector('path').setAttribute('d', shape.d);
+      }
+      groups[i].querySelector('.lbl').textContent = face.unit;
+      groups[i].classList.toggle('urgent', urgent);
+    }
+    $('hdClock').hidden = done || !current.slots.length;
+    $('hdDone').hidden = !done;
+    const showTeam = state.program === 'presentation' && current.slots.length > 0;
+    $('hdTeam').hidden = !showTeam;
+    if (showTeam) $('hdTeam').textContent = 'TEAM ' + state.team;
+
+    $('message').textContent = state.message || '';
+    $('message').classList.toggle('on', !!state.message);
+
+    // Audio cues, on whole-second boundaries only.
+    const sec = Math.ceil(ms / 1000);
+    if (live && sec !== lastSecond) {
+      if (sec > 0 && sec <= 10) beep(880, 0.07, 0.25);
+      lastSecond = sec;
+    }
+    if (done && lastSecond !== 'done') { lastSecond = 'done'; fanfare(); }
+    if (!done && lastSecond === 'done') lastSecond = null;
+  }
+
+  // 20fps is plenty for a countdown and keeps cheap TV browsers cool.
+  setInterval(tick, 50);
+
+  // ---- transport ---------------------------------------------------------
+  let es = null;
+  function connect() {
+    es = new EventSource('/events?role=display');
+    es.addEventListener('state', (e) => {
+      state = JSON.parse(e.data);
+      $('offline').classList.remove('on');
+      paint();
+    });
+    es.onopen = () => $('offline').classList.remove('on');
+    es.onerror = () => {
+      $('offline').classList.add('on');
+      if (es.readyState === EventSource.CLOSED) setTimeout(connect, 1500);
+    };
+  }
+  connect();
+  applyMode();
+
+  // ---- sound -------------------------------------------------------------
+  // Browsers block audio until the page is interacted with, so a display stays
+  // silent until someone clicks it or presses S.
+  let ac = null;
+  function enableSound() {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    beep(660, 0.06, 0.2);
+  }
+  function beep(freq, dur, vol) {
+    if (!ac || ac.state !== 'running') return;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+    o.connect(g).connect(ac.destination);
+    o.start(); o.stop(ac.currentTime + dur);
+  }
+  function fanfare() {
+    [0, 0.18, 0.36, 0.6].forEach((t, i) =>
+      setTimeout(() => beep(i === 3 ? 523 : 784, i === 3 ? 0.9 : 0.15, 0.3), t * 1000));
+  }
+
+  // ---- screen behaviour --------------------------------------------------
+  document.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if (k === 'f') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    if (k === 's') enableSound();
+    if (k === 'c') { mode = 'column'; applyMode(); }
+    if (k === 'h') { mode = 'hd'; applyMode(); }
+  });
+  document.addEventListener('click', () => {
+    enableSound();
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+  });
+
+  let hintTimer;
+  document.addEventListener('mousemove', () => {
+    document.body.classList.add('show-cursor');
+    $('hint').classList.add('on');
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => {
+      document.body.classList.remove('show-cursor');
+      $('hint').classList.remove('on');
+    }, 2500);
+  });
+
+  // Best effort: stop the TV dimming or sleeping mid-event.
+  if ('wakeLock' in navigator) {
+    const hold = () => navigator.wakeLock.request('screen').catch(() => {});
+    hold();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) hold(); });
+  }
+})();
+</script>
+</body>
+</html>
