@@ -79,16 +79,49 @@ switching the artwork and re-winding the clock for each slot:
 | Message banner | Pushes a line of text across the bottom of every screen |
 
 Keyboard on the admin page: `Space` start/pause, `R` reset, `←` `→` ∓1 minute.
-Keyboard on a display: `F` fullscreen, `S` sound, `C` / `H` force a layout.
+Keyboard on a display: `F` fullscreen, `S` sound, `C` / `H` force a layout,
+`D` diagnostics.
 
 ## The two layouts
 
 A display picks its own layout from the shape of the screen it is on, so the
-same URL works everywhere. Anything taller than 2:1 gets the **column** layout —
-the artwork exactly as designed, filling the screen. Anything squarer gets the
-**HD** layout, which takes the column apart and re-composes it for 16:9: the
-wordmark, the phase headline and the strapline down one side, the clock across
-the other. Force either with `?mode=column` or `?mode=hd`.
+same URL works everywhere. A portrait screen gets the **column** layout — the
+artwork exactly as designed. A landscape screen squarer than 2:1 gets the **HD**
+layout, which takes the column apart and re-composes it for 16:9: the wordmark,
+the phase headline and the strapline down one side, the clock across the other.
+Force either with `?mode=column` or `?mode=hd`.
+
+The column artwork is 1:4.5 — a 0.60 × 2.70 m panel exactly. On a frame of that
+shape it fills the screen; on a frame of any other shape it is letterboxed, so
+nothing is ever stretched or cropped.
+
+### Driving a column through an LED processor or media server
+
+Software like **NovaStar Kompass FX3** renders a web page onto a canvas of *its
+own* size and then maps that canvas onto the panel. The browser is handed, say,
+a 1080 × 1920 frame and has no way to know the wall is 1:4.5 — so it letterboxes
+against the frame it was given, and the result on the wall is the design squeezed
+into part of the screen with black either side.
+
+Add **`?fit=fill`** for this case:
+
+```
+http://<server>:3000/display?mode=column&fit=fill
+```
+
+The artwork is then painted corner to corner over whatever frame the media server
+provides, live digits and unit words stretching with it, and the processor's own
+mapping puts it back into proportion on the panel. In Kompass, give the webpage
+layer the panel's aspect ratio if you can — but with `fit=fill` it looks right
+either way. Set the layer to cover the whole output; do not letterbox it there
+as well.
+
+### When a screen looks wrong
+
+Add **`?debug`** (or press `D` on the display) for a readout of the frame size
+the browser was actually given, the ratio it works out to, and which layout it
+picked, with centre lines and a border showing the frame's true edges. That is
+usually enough to tell a media-server canvas problem from a page problem.
 
 ## How the screens are built
 

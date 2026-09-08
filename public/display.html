@@ -22,7 +22,15 @@
   #stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
   #plateBox{position:relative;height:100%;max-width:100%}
   #plateBox.fitW{width:100%;height:auto}
+  /* Filling instead of letterboxing. An LED processor or media server (Kompass
+     FX3 and friends) renders this page onto a canvas of its own choosing and
+     then maps that canvas onto a panel of the designed shape — the geometry is
+     done downstream, so a black letterbox here is painted straight onto the
+     wall. Filling stretches the plate edge to edge; the live overlays are told
+     to stretch with it, so nothing drifts off its designed position. */
+  #plateBox.fill{width:100% !important;height:100% !important;max-width:none}
   #plate{width:100%;height:100%;object-fit:contain}
+  #plateBox.fill #plate{object-fit:fill}
 
   .slot{position:absolute}
   .slot svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 var(--halo,6px) var(--glow,transparent))}
@@ -34,7 +42,7 @@
      are indistinguishable at any viewing distance a wall implies. */
   .unit{
     position:absolute;left:50%;top:50%;
-    transform:translate(-50%,calc(-50% + .08em)) scaleX(.845);
+    transform:translate(-50%,calc(-50% + .08em)) scaleX(calc(.845 * var(--xstretch,1)));
     white-space:nowrap;font-weight:300;line-height:1;
     letter-spacing:.10em;text-indent:.10em;
   }
@@ -76,9 +84,12 @@
   body.noclock #hdClock,body.noclock #hdDone{display:none}
   body.noclock #hdLeft.empty{display:none}
 
-  #hdClock{display:flex;align-items:flex-start;justify-content:center;gap:4vw}
-  #hdClock .grp{display:flex;flex-direction:column;align-items:center;gap:2vh}
-  #hdClock svg{height:34vh;width:auto;overflow:visible;filter:drop-shadow(0 0 1.4vh var(--glow,transparent))}
+  #hdClock{display:flex;align-items:flex-start;justify-content:center;gap:4vw;max-width:100%}
+  #hdClock .grp{display:flex;flex-direction:column;align-items:center;gap:2vh;min-width:0;max-width:100%}
+  /* 34vh is the size on a 16:9 wall. The vw cap stops the digits bursting out
+     of the frame — and over the headline — on anything squarer or taller. */
+  #hdClock svg{height:min(34vh,30vw);width:auto;max-width:100%;
+               overflow:visible;filter:drop-shadow(0 0 1.4vh var(--glow,transparent))}
   #hdClock svg path{fill:var(--accent)}
   #hdClock .lbl{font-size:2.3vh;font-weight:300;letter-spacing:.34em;text-indent:.34em;
                 color:var(--accent);opacity:.7}
@@ -106,6 +117,21 @@
     opacity:0;transition:opacity .4s;letter-spacing:.1em;
   }
   #hint.on{opacity:1}
+  /* ?debug — what the browser thinks this screen is. Read it off the wall when
+     a media server is in the chain and its canvas size is anyone's guess. */
+  #debug{
+    position:fixed;left:0;top:0;z-index:8;padding:.6em .8em;
+    background:rgba(0,0,0,.72);color:#7ef9d0;font-family:ui-monospace,Menlo,monospace;
+    font-size:clamp(10px,1.6vmin,20px);line-height:1.5;white-space:pre;letter-spacing:.02em;
+  }
+  #debugFrame{position:fixed;inset:0;z-index:8;pointer-events:none;
+    border:2px solid #7ef9d0;
+    background:
+      linear-gradient(to right,transparent calc(50% - 1px),#7ef9d0 calc(50% - 1px),
+                      #7ef9d0 calc(50% + 1px),transparent calc(50% + 1px)),
+      linear-gradient(to bottom,transparent calc(50% - 1px),#7ef9d0 calc(50% - 1px),
+                      #7ef9d0 calc(50% + 1px),transparent calc(50% + 1px));
+    opacity:.5}
   body.blackout #stage,body.blackout #hd,body.blackout #message{opacity:0;transition:opacity .6s}
 </style>
 </head>
@@ -131,7 +157,8 @@
 </div>
 
 <div id="message"></div>
-<div id="hint">F — fullscreen · S — sound · C / H — layout</div>
+<div id="hint">F — fullscreen · S — sound · C / H — layout · D — diagnostics</div>
+<div id="debugFrame" hidden></div><div id="debug" hidden></div>
 
 <script src="/screen.js"></script>
 <script>
@@ -143,16 +170,31 @@
   // ---- layout ------------------------------------------------------------
   // A column screen is extremely tall (the artwork is 1:4.5). Anything squarer
   // than roughly 2:1 gets the landscape composition instead. ?mode= overrides.
-  const forced = new URLSearchParams(location.search).get('mode');
+  const params = new URLSearchParams(location.search);
+  const forced = params.get('mode');
   let mode = forced === 'hd' || forced === 'column' ? forced : null;
+
+  // ?fit=fill stretches the artwork over the whole frame instead of
+  // letterboxing it. Use it whenever something downstream — an LED processor,
+  // or a media server such as Kompass FX3 — owns the geometry: it renders this
+  // page at a canvas size of its own and maps that canvas onto the panel, so
+  // the page's job is simply to paint the design corner to corner.
+  const fit = (params.get('fit') || '').toLowerCase();
+  let debug = params.has('debug');
 
   function chooseMode() {
     if (mode) return mode;
+    // The landscape composition is built for 16:9 and bursts its frame on
+    // anything taller than it is wide — a portrait frame always gets the
+    // column, letterboxed if need be, which at worst shows the design small
+    // rather than showing it broken.
+    if (innerHeight > innerWidth) return 'column';
     return innerHeight / innerWidth >= 2.2 ? 'column' : 'hd';
   }
   function applyMode() {
     document.body.classList.toggle('hd', chooseMode() === 'hd');
     fitPlate();
+    if (debug) drawDebug();
   }
   addEventListener('resize', applyMode);
 
@@ -167,22 +209,75 @@
     if (state) paint();
   });
 
+  /** Should the plate fill the frame rather than sit letterboxed inside it? */
+  function shouldFill(s) {
+    if (fit === 'fill') return true;
+    if (fit === 'contain') return false;
+    // Left to itself: a frame within a few percent of the designed shape is
+    // filled, because the bars would be a hairline of black down the edge of a
+    // wall and the stretch is far below anything an eye can see. Anything
+    // further off is letterboxed, where the distortion would show.
+    return Math.abs((innerWidth / innerHeight) / (s.w / s.h) - 1) < 0.08;
+  }
+
   function fitPlate() {
     const s = current;
     if (!s) return;
-    // Match the letterbox: if the viewport is wider than the plate's aspect,
-    // the plate is height-bound, otherwise width-bound.
     const box = $('plateBox');
-    const tall = innerWidth / innerHeight < s.w / s.h;
-    box.classList.toggle('fitW', tall);
-    box.style.width = tall ? '100%' : (innerHeight * s.w / s.h) + 'px';
-    box.style.height = tall ? (innerWidth * s.h / s.w) + 'px' : '100%';
-    const h = box.getBoundingClientRect().height;
+    const fill = shouldFill(s);
+    box.classList.toggle('fill', fill);
+
+    if (fill) {
+      box.classList.remove('fitW');
+      box.style.width = box.style.height = '';
+    } else {
+      // Match the letterbox: if the viewport is wider than the plate's aspect,
+      // the plate is height-bound, otherwise width-bound.
+      const tall = innerWidth / innerHeight < s.w / s.h;
+      box.classList.toggle('fitW', tall);
+      box.style.width = tall ? '100%' : (innerHeight * s.w / s.h) + 'px';
+      box.style.height = tall ? (innerWidth * s.h / s.w) + 'px' : '100%';
+    }
+
+    const r = box.getBoundingClientRect();
+    const h = r.height;
     box.style.setProperty('--halo', (h * 0.0012) + 'px');
-    // Cap height of the designed word, turned into a font size.
+    // How far the fill stretches the artwork sideways. The overlays have to
+    // follow it exactly or the live digits drift off the designed positions.
+    const stretch = h ? (r.width / h) / (s.w / s.h) : 1;
+    box.style.setProperty('--xstretch', stretch);
     for (const el of slotEls) {
+      el.svg.setAttribute('preserveAspectRatio', fill ? 'none' : 'xMidYMid meet');
+      // Cap height of the designed word, turned into a font size.
       if (el.label) el.label.querySelector('.unit').style.fontSize = (h * el.slot.label.h / 0.72) + 'px';
     }
+  }
+
+  // ---- diagnostics -------------------------------------------------------
+  // A media server in the chain decides the canvas this page is rendered at,
+  // and it is rarely the shape of the panel. This says what the browser sees.
+  function drawDebug() {
+    const s = current;
+    const box = $('plateBox').getBoundingClientRect();
+    const ratio = (innerWidth / innerHeight);
+    const art = s ? s.w / s.h : NaN;
+    $('debug').textContent = [
+      'frame    ' + innerWidth + ' x ' + innerHeight + ' css px  (dpr ' + devicePixelRatio + ')',
+      'device   ' + screen.width + ' x ' + screen.height,
+      'ratio    1 : ' + (1 / ratio).toFixed(3) + (ratio > 1 ? '  (landscape)' : ''),
+      'artwork  1 : ' + (s ? (1 / art).toFixed(3) : '?') + '   (want 1 : 4.500)',
+      'layout   ' + (document.body.classList.contains('hd') ? 'HD / landscape' : 'COLUMN')
+                  + (mode ? ' (forced)' : ' (auto)'),
+      'plate    ' + Math.round(box.width) + ' x ' + Math.round(box.height)
+                  + (document.getElementById('plateBox').classList.contains('fill')
+                     ? '  FILL' : '  letterboxed'),
+      'screen   ' + (s ? s.id : '—'),
+    ].join('\n');
+  }
+  function setDebug(on) {
+    debug = on;
+    $('debug').hidden = $('debugFrame').hidden = !on;
+    if (on) drawDebug();
   }
 
   /** Rebuild the live overlays for whichever screen is showing. */
@@ -205,6 +300,7 @@
       buildSlots(s);
       buildHdClock(s);
       fitPlate();
+      if (debug) drawDebug();
     }
     tick();
   }
@@ -341,6 +437,7 @@
   }
   connect();
   applyMode();
+  setDebug(debug);
 
   // ---- sound -------------------------------------------------------------
   // Browsers block audio until the page is interacted with, so a display stays
@@ -372,6 +469,7 @@
     if (k === 's') enableSound();
     if (k === 'c') { mode = 'column'; applyMode(); }
     if (k === 'h') { mode = 'hd'; applyMode(); }
+    if (k === 'd') setDebug(!debug);
   });
   document.addEventListener('click', () => {
     enableSound();
