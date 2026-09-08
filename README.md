@@ -76,6 +76,12 @@ switching the artwork and re-winding the clock for each slot:
 | Demo time | `coloum-screen(Teams)-01.jpg` |
 | Judges time | `coloum-screen(Teams)-02.jpg` |
 | Teams branding | `coloum-screen(Teams)-03.jpg` |
+| First place | `coloum-screen(winners)-01.jpg` |
+| Second place | `coloum-screen(winners)-02.jpg` |
+| Third place | `coloum-screen(winners)-03.jpg` |
+
+The three winners screens carry no countdown — they are artwork, picked like any
+other screen, and the clock keeps running behind them untouched.
 
 ### Controls
 
@@ -224,12 +230,18 @@ moves, the designed unit words can no longer be left where they are: each is
 covered with a patch of its own background and all of them are re-drawn beside
 the rows they now belong to.
 
-**The strategic-partner row.** The artwork was signed off with Tuwaiq Academy and
-Digital Saudi alone. `Assets/logos2-04.png` is the current row — Site, Digital
-Saudi, Tuwaiq Academy, HUMAIN under their Arabic and English heading — and it is
-set in place of the designed lockup, keeping the design's own right-hand margin.
-`PARTNER_WIDTH` in `tools/prepare.py` is how much of the column it takes and so
-how large it is; it leaves the PIF mark air rather than filling the row. Drop a
+**The strategic-partner row.** The design put PIF and the partners either side of
+one strip across the top, and the partners have changed since it was signed off.
+`Assets/logos2-04.png` is the current row — Site, Digital Saudi, Tuwaiq Academy,
+HUMAIN under their Arabic and English heading. The designed lockup is lifted off
+the top, leaving PIF that strip to itself, and the new row is set across the foot
+of the column, where it gets the full width and ends up larger than it was.
+
+It sits at the same height on every screen: the winners artwork runs far lower
+than the rest, and a row that shifted as the screens changed would read as a
+wobble on the wall. `PARTNER_WIDTH` and `PARTNER_BOTTOM` in `tools/prepare.py`
+are its size and its margin from the foot; the row gives way and shrinks only if
+a screen ever draws far enough down to touch it, and says so when it does. Drop a
 new file in under that name and re-run to change the partners again.
 
 Re-run `python3 tools/prepare.py` whenever anything in `Assets/` changes. Each

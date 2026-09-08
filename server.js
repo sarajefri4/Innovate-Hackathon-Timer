@@ -62,7 +62,7 @@ const ART_REV = String(ARTWORK.rev || Date.now());
 /** Screens the admin may pick for a program, in the order they run. */
 const MENU = {
   hacking: ['hold', 'started', 'mentoring1', 'build', 'mentoring2', 'prototype'],
-  presentation: ['hold', 'demo', 'judges', 'teams'],
+  presentation: ['hold', 'demo', 'judges', 'teams', 'first', 'second', 'third'],
 };
 const SEGMENT_SCREEN = { demo: 'demo', judges: 'judges' };
 

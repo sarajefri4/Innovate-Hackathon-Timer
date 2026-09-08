@@ -49,9 +49,12 @@ JPEG_Q = 88
 # strategic-partner row, header and all — is set in its place, scaled to the
 # width between the PIF mark and the right-hand margin the design already uses.
 PARTNER_BAND = 0.045      # the top strip, as a fraction of the height
-PARTNER_WIDTH = 0.72      # how much of the column's width the row takes
-PARTNER_BOTTOM = 0.030    # its margin from the foot of the column, of the height
-PARTNER_CLEAR = 0.014     # least clearance from the artwork above it, of the height
+# Sized and placed to sit at the same height on every screen — the winners
+# artwork runs a good deal lower than the rest, and a row that shifted as the
+# screens changed would read as a wobble on the wall.
+PARTNER_WIDTH = 0.62      # how much of the column's width the row takes
+PARTNER_BOTTOM = 0.018    # its margin from the foot of the column, of the height
+PARTNER_CLEAR = 0.008     # least clearance from the artwork above it, of the height
 PARTNER_ART = "logos2-04.png"
 
 # --- how many rows the countdown gets --------------------------------------
@@ -336,13 +339,15 @@ def add_partners(arr, W, H):
     designed = ink_box(lum, 0, band, int(0.40 * W), W, thr=110, min_px=3)
     out = erase(arr, lum, [designed], pad=int(0.006 * H)) if designed is not None else arr.copy()
 
-    # Everything the artwork still draws, now that the top row has gone.
+    # The same place on every screen, unless one of them draws so far down that
+    # the row would touch it — then, and only then, it gives way.
     floor_y = H - PARTNER_BOTTOM * H
     ceiling = last_ink(out.max(axis=2).astype(np.float32), W, H) + PARTNER_CLEAR * H
 
     w = PARTNER_WIDTH * W
     h = w * logo.height / logo.width
     if floor_y - h < ceiling:
+        print("    partner row shrunk to clear the artwork above it", flush=True)
         h = max(1.0, floor_y - ceiling)
         w = h * logo.width / logo.height
     w, h = max(1, round(w)), max(1, round(h))
@@ -474,12 +479,25 @@ def still_bands(lum, W, H):
     if not found:
         return ()
     hero = max(found, key=lambda b: b[1] - b[0])
-    above = [b for b in found if b[1] <= hero[0]]
+    lockup_end = 0.180 * H
+    above = [b for b in found if b[0] >= lockup_end and b[1] <= hero[0]]
     below = [b for b in found if b[0] >= hero[1] and (b[1] - b[0]) <= 0.05 * H]
+
+    def band(name, runs):
+        return (name, runs[0][0] / H - 0.008, runs[-1][1] / H + 0.008)
+
     out = [("lockup", 0.010, 0.180)]
     out.append(("hero", max(0.185, hero[0] / H - 0.004), hero[1] / H + 0.004))
-    if below and max(b[1] - b[0] for b in below) >= 0.008 * H:
-        out.append(("headline", below[0][0] / H - 0.008, below[-1][1] / H + 0.008))
+    # A title above the picture is the screen's headline — that is where the
+    # winners screens put "FIRST PLACE", and reading only below the picture
+    # dropped it from the landscape composition entirely. Where there is no
+    # such title, the copy below the picture is the headline, as before.
+    if above and max(b[1] - b[0] for b in above) >= 0.008 * H:
+        out.append(band("headline", above))
+        if below and max(b[1] - b[0] for b in below) >= 0.008 * H:
+            out.append(band("tagline", below))
+    elif below and max(b[1] - b[0] for b in below) >= 0.008 * H:
+        out.append(band("headline", below))
     return tuple(out)
 
 

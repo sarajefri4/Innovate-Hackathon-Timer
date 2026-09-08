@@ -1,6 +1,6 @@
 {
  "version": 1,
- "rev": "1788873266",
+ "rev": "1788879350",
  "screens": [
   {
    "id": "hold",
@@ -25,7 +25,7 @@
     },
     "headline": {
      "src": "screens/hold-headline.png",
-     "ratio": 0.4493260109835247
+     "ratio": 0.3813559322033898
     }
    }
   },
@@ -105,7 +105,7 @@
    "crops": {
     "lockup": {
      "src": "screens/started-lockup.png",
-     "ratio": 1.2096774193548387
+     "ratio": 1.1166253101736974
     },
     "headline": {
      "src": "screens/started-headline.png",
@@ -193,7 +193,7 @@
    "crops": {
     "lockup": {
      "src": "screens/mentoring1-lockup.png",
-     "ratio": 1.2096774193548387
+     "ratio": 1.1166253101736974
     },
     "headline": {
      "src": "screens/mentoring1-headline.png",
@@ -281,7 +281,7 @@
    "crops": {
     "lockup": {
      "src": "screens/build-lockup.png",
-     "ratio": 1.2096774193548387
+     "ratio": 1.1166253101736974
     },
     "headline": {
      "src": "screens/build-headline.png",
@@ -369,7 +369,7 @@
    "crops": {
     "lockup": {
      "src": "screens/mentoring2-lockup.png",
-     "ratio": 1.2096774193548387
+     "ratio": 1.1166253101736974
     },
     "headline": {
      "src": "screens/mentoring2-headline.png",
@@ -457,7 +457,7 @@
    "crops": {
     "lockup": {
      "src": "screens/prototype-lockup.png",
-     "ratio": 1.2096774193548387
+     "ratio": 1.1166253101736974
     },
     "headline": {
      "src": "screens/prototype-headline.png",
@@ -523,7 +523,7 @@
    "crops": {
     "lockup": {
      "src": "screens/demo-lockup.png",
-     "ratio": 1.2295081967213115
+     "ratio": 1.1320754716981132
     },
     "headline": {
      "src": "screens/demo-headline.png",
@@ -589,7 +589,7 @@
    "crops": {
     "lockup": {
      "src": "screens/judges-lockup.png",
-     "ratio": 1.2096774193548387
+     "ratio": 1.1166253101736974
     },
     "headline": {
      "src": "screens/judges-headline.png",
@@ -621,6 +621,103 @@
     "hero": {
      "src": "screens/teams-hero.jpg",
      "ratio": 0.4396678065461651
+    },
+    "headline": {
+     "src": "screens/teams-headline.png",
+     "ratio": 0.8426966292134831
+    }
+   }
+  },
+  {
+   "id": "first",
+   "source": "coloum-screen(winners)-01.jpg",
+   "program": "presentation",
+   "name": "First place",
+   "src": "screens/first.jpg",
+   "bg": "screens/first-bg.jpg",
+   "w": 1440,
+   "h": 6479,
+   "accent": "#ffffff",
+   "slots": [],
+   "patches": [],
+   "crops": {
+    "lockup": {
+     "src": "screens/first-lockup.png",
+     "ratio": 1.1166253101736974
+    },
+    "hero": {
+     "src": "screens/first-hero.jpg",
+     "ratio": 0.7258064516129032
+    },
+    "headline": {
+     "src": "screens/first-headline.png",
+     "ratio": 0.7614213197969543
+    },
+    "tagline": {
+     "src": "screens/first-tagline.png",
+     "ratio": 0.8302583025830258
+    }
+   }
+  },
+  {
+   "id": "second",
+   "source": "coloum-screen(winners)-02.jpg",
+   "program": "presentation",
+   "name": "Second place",
+   "src": "screens/second.jpg",
+   "bg": "screens/second-bg.jpg",
+   "w": 1440,
+   "h": 6479,
+   "accent": "#ffffff",
+   "slots": [],
+   "patches": [],
+   "crops": {
+    "lockup": {
+     "src": "screens/second-lockup.png",
+     "ratio": 1.1166253101736974
+    },
+    "hero": {
+     "src": "screens/second-hero.jpg",
+     "ratio": 0.7194244604316546
+    },
+    "headline": {
+     "src": "screens/second-headline.png",
+     "ratio": 0.783289817232376
+    },
+    "tagline": {
+     "src": "screens/second-tagline.png",
+     "ratio": 0.8302583025830258
+    }
+   }
+  },
+  {
+   "id": "third",
+   "source": "coloum-screen(winners)-03.jpg",
+   "program": "presentation",
+   "name": "Third place",
+   "src": "screens/third.jpg",
+   "bg": "screens/third-bg.jpg",
+   "w": 1440,
+   "h": 6479,
+   "accent": "#ffffff",
+   "slots": [],
+   "patches": [],
+   "crops": {
+    "lockup": {
+     "src": "screens/third-lockup.png",
+     "ratio": 1.1166253101736974
+    },
+    "hero": {
+     "src": "screens/third-hero.jpg",
+     "ratio": 0.7281553398058253
+    },
+    "headline": {
+     "src": "screens/third-headline.png",
+     "ratio": 0.783289817232376
+    },
+    "tagline": {
+     "src": "screens/third-tagline.png",
+     "ratio": 0.8302583025830258
     }
    }
   }
