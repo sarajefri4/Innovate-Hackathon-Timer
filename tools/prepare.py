@@ -49,8 +49,9 @@ JPEG_Q = 88
 # strategic-partner row, header and all — is set in its place, scaled to the
 # width between the PIF mark and the right-hand margin the design already uses.
 PARTNER_BAND = 0.045      # the top strip, as a fraction of the height
-PARTNER_WIDTH = 0.52      # how much of the width the row takes
-PARTNER_GAP = 0.07        # least clearance from the PIF lockup, same units
+PARTNER_WIDTH = 0.72      # how much of the column's width the row takes
+PARTNER_BOTTOM = 0.030    # its margin from the foot of the column, of the height
+PARTNER_CLEAR = 0.014     # least clearance from the artwork above it, of the height
 PARTNER_ART = "logos2-04.png"
 
 # --- how many rows the countdown gets --------------------------------------
@@ -76,6 +77,9 @@ SCREENS = [
     ("demo",       "coloum-screen(Teams)-01.jpg",   "presentation", "Demo time",              [TEAM_SLOT]),
     ("judges",     "coloum-screen(Teams)-02.jpg",   "presentation", "Judges time",            [TEAM_SLOT]),
     ("teams",      "coloum-screen(Teams)-03.jpg",   "presentation", "Teams branding",         []),
+    ("first",      "coloum-screen(winners)-01.jpg", "presentation", "First place",            []),
+    ("second",     "coloum-screen(winners)-02.jpg", "presentation", "Second place",           []),
+    ("third",      "coloum-screen(winners)-03.jpg", "presentation", "Third place",            []),
 ]
 
 INK = 150       # luminance above which a pixel counts as artwork ink
@@ -306,14 +310,22 @@ def paste_rgba(arr, rgba, x, y):
     arr[y0:y1, x0:x1] = np.clip(dst * (1 - a) + src[..., :3] * a, 0, 255).astype(np.uint8)
 
 
+def last_ink(lum, W, H):
+    """The lowest row of the artwork that has anything on it."""
+    rows = np.where((lum > 150).sum(axis=1) > W * 0.004)[0]
+    return int(rows[-1]) if len(rows) else 0
+
+
 def add_partners(arr, W, H):
     """
-    Swap the designed partner lockup for the current one.
+    Take the partner lockup off the top and set the current one at the foot.
 
-    The replacement keeps the design's own right-hand margin. It carries a
-    header line the designed lockup did not, so it is a wider piece of artwork
-    for the same row — sized to leave the PIF mark plenty of air rather than
-    filling everything the row will hold, which crowds the two together.
+    The design put PIF and the partners either side of one strip. Moving the
+    partners to the bottom leaves PIF the top of the column to itself and gives
+    the partner row the full width down there — so it ends up larger than it
+    was, not smaller, despite the demotion. The column's foot is empty gradient
+    on every screen, and the row is fitted to whatever of it the artwork above
+    leaves free.
     """
     logo = load_partner(PARTNER_ART)
     if logo is None:
@@ -321,21 +333,21 @@ def add_partners(arr, W, H):
 
     lum = arr.max(axis=2).astype(np.float32)
     band = int(PARTNER_BAND * H)
-    old = ink_box(lum, 0, band, int(0.40 * W), W, thr=110, min_px=3)
-    pif = ink_box(lum, 0, band, 0, int(0.38 * W), thr=110, min_px=3)
-    if old is None:
-        return arr
-    bx0, by0, bx1, by1 = old
-    limit = bx1 - ((pif[2] if pif else 0) + PARTNER_GAP * W)
+    designed = ink_box(lum, 0, band, int(0.40 * W), W, thr=110, min_px=3)
+    out = erase(arr, lum, [designed], pad=int(0.006 * H)) if designed is not None else arr.copy()
 
-    avail_w = min(PARTNER_WIDTH * W, limit)
-    avail_h = band * 0.86
-    scale = min(avail_w / logo.width, avail_h / logo.height)
-    w = max(1, round(logo.width * scale))
-    h = max(1, round(logo.height * scale))
+    # Everything the artwork still draws, now that the top row has gone.
+    floor_y = H - PARTNER_BOTTOM * H
+    ceiling = last_ink(out.max(axis=2).astype(np.float32), W, H) + PARTNER_CLEAR * H
 
-    out = erase(arr, lum, [old], pad=int(0.006 * H))
-    paste_rgba(out, logo.resize((w, h), Image.LANCZOS), bx1 - w, (by0 + by1) / 2 - h / 2)
+    w = PARTNER_WIDTH * W
+    h = w * logo.height / logo.width
+    if floor_y - h < ceiling:
+        h = max(1.0, floor_y - ceiling)
+        w = h * logo.width / logo.height
+    w, h = max(1, round(w)), max(1, round(h))
+
+    paste_rgba(out, logo.resize((w, h), Image.LANCZOS), (W - w) / 2, floor_y - h)
     return out
 
 
