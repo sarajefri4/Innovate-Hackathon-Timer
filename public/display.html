@@ -166,6 +166,7 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
   const clock = Screen7.createClock();
+  const BUILD = '2026-09-08c';
 
   // ---- layout ------------------------------------------------------------
   // A column screen is extremely tall (the artwork is 1:4.5). Anything squarer
@@ -187,9 +188,17 @@
     if (state && state.panelW > 0 && state.panelH > 0) return state.panelW / state.panelH;
     return current ? current.w / current.h : 1440 / 6479;
   }
-  /** Has the operator said the frame is being mapped onto a panel downstream? */
+  /** Is the frame being mapped onto a panel downstream rather than being the
+      screen itself? Assumed yes unless something says otherwise. Every screen
+      this is built for is a column fed through an LED processor, and from
+      inside the browser that is indistinguishable from a laptop — reading the
+      frame and guessing got it wrong on the wall, twice. The column is the
+      safe guess; `?mode=hd`, `?fit=contain` and the admin page's stretch
+      switch are the ways out of it. */
   function panelDriven() {
-    return fit === 'fill' || (fit !== 'contain' && !!(state && state.panelFill));
+    if (fit === 'fill') return true;
+    if (fit === 'contain') return false;
+    return !(state && state.panelFill === false);
   }
 
   function chooseMode() {
@@ -225,13 +234,12 @@
 
   /** Should the plate fill the frame rather than sit letterboxed inside it? */
   function shouldFill(s) {
-    if (fit === 'fill') return true;
-    if (fit === 'contain') return false;
-    if (state && state.panelFill) return true;
-    // Left to itself: a frame within a few percent of the designed shape is
-    // filled, because the bars would be a hairline of black down the edge of a
-    // wall and the stretch is far below anything an eye can see. Anything
-    // further off is letterboxed, where the distortion would show.
+    if (panelDriven()) return true;
+    // Stretch switched off: the frame is the screen. A frame within a few
+    // percent of the designed shape is still filled, because the bars would be
+    // a hairline of black down the edge of a wall and the stretch is far below
+    // anything an eye can see. Anything further off is letterboxed, where the
+    // distortion would show.
     return Math.abs((innerWidth / innerHeight) / (s.w / s.h) - 1) < 0.08;
   }
 
@@ -277,14 +285,17 @@
     const ratio = (innerWidth / innerHeight);
     const art = s ? s.w / s.h : NaN;
     $('debug').textContent = [
+      'build    ' + BUILD + (state && state.panelFill != null ? '  server: shape ok'
+                                                              : '  server: OLD, restart it'),
       'frame    ' + innerWidth + ' x ' + innerHeight + ' css px  (dpr ' + devicePixelRatio + ')',
       'device   ' + screen.width + ' x ' + screen.height,
       'ratio    1 : ' + (1 / ratio).toFixed(3) + (ratio > 1 ? '  (landscape)' : ''),
       'artwork  1 : ' + (s ? (1 / art).toFixed(3) : '?'),
-      'panel    ' + (state ? state.panelW + ' x ' + state.panelH
-                             + '  = 1 : ' + (state.panelH / state.panelW).toFixed(3)
-                             + (state.panelFill ? '  (fill)' : '  (fit)')
-                           : '—'),
+      'panel    ' + (state && state.panelW > 0
+                      ? state.panelW + ' x ' + state.panelH + '  = '
+                      : 'assumed  ')
+                  + '1 : ' + (1 / panelRatio()).toFixed(3)
+                  + (panelDriven() ? '  (fill)' : '  (fit)'),
       'layout   ' + (document.body.classList.contains('hd') ? 'HD / landscape' : 'COLUMN')
                   + (mode ? ' (forced)' : ' (auto)'),
       'plate    ' + Math.round(box.width) + ' x ' + Math.round(box.height)

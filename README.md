@@ -35,9 +35,16 @@ needed again.
 
 Every screen must be on the same network as the server.
 
-**The server holds the screen shape, so it has to be restarted after an update**
-— and restarting also puts the timer back to its defaults, so do it before the
-event rather than during it.
+**Restart the server after an update** — it holds the screen shape, so the admin
+card cannot change it until you do. The displays are right either way. Restarting
+also puts the timer back to its defaults, so do it before the event rather than
+during it.
+
+**If a display looks stale, prove it.** `?debug` prints the build stamp of the
+page that is actually running and whether it is talking to a server that knows
+about screen shape. An LED media server's embedded browser caches harder than a
+normal one — remove and re-add the webpage layer, or point it at
+`/display?v=2`, to be certain it has fetched the current file.
 
 ### The two programs
 
@@ -88,12 +95,18 @@ Keyboard on a display: `F` fullscreen, `S` sound, `C` / `H` force a layout,
 
 ## The two layouts
 
-A display picks its own layout from the shape of the screen it is on, so the
-same URL works everywhere. A portrait screen gets the **column** layout — the
-artwork exactly as designed. A landscape screen squarer than 2:1 gets the **HD**
-layout, which takes the column apart and re-composes it for 16:9: the wordmark,
-the phase headline and the strapline down one side, the clock across the other.
-Force either with `?mode=column` or `?mode=hd`.
+A display shows the **column** layout — the artwork exactly as designed — unless
+it is told otherwise. The other one is the **HD** layout, which takes the column
+apart and re-composes it for 16:9: the wordmark, the phase headline and the
+strapline down one side, the clock across the other. A TV, a projector or a
+laptop gets it with **`?mode=hd`** — the admin page's *Copy HD link* button.
+
+It does not guess. A browser can measure the frame it was handed but has no way
+to see the wall that frame ends up on, and every screen this is built for is a
+column fed through an LED processor — which from inside the browser looks exactly
+like an ordinary laptop. Guessing from the frame put the landscape composition on
+a column wall, so the column is now simply the default and the landscape layout
+is asked for by name.
 
 The column artwork is 1:4.5 — a 0.60 × 2.70 m panel exactly.
 
@@ -105,8 +118,10 @@ shape** card on the admin page is where you say it — width and height in any
 unit (only the ratio is read), and whether to stretch to fill the frame. It
 lands on every display at once, live, like every other control.
 
-It starts at **0.60 × 2.70 m, stretch on**, which is the artwork's own shape.
-Leave it alone and the column screens are right without a single URL parameter.
+It starts at **0.60 × 2.70 m, stretch on**, which is the artwork's own shape —
+and a display that cannot reach those settings assumes exactly the same thing.
+Leave it alone and the column screens are right without a single URL parameter,
+whatever canvas the media server renders them at.
 
 *Stretch to fill the frame* is the setting that matters. Leave it **on** whenever
 anything downstream — an LED processor, a media server — maps the browser's
@@ -148,10 +163,12 @@ size is fixed or unknown.
 
 ### When a screen looks wrong
 
-Add **`?debug`** (or press `D` on the display) for a readout of the frame size
-the browser was actually given, the ratio it works out to, and which layout it
-picked, with centre lines and a border showing the frame's true edges. That is
-usually enough to tell a media-server canvas problem from a page problem.
+Add **`?debug`** (or press `D` on the display) for a readout of the build stamp,
+the frame size the browser was actually given, the ratio it works out to, the
+screen shape in force and which layout it picked — with centre lines and a border
+showing the frame's true edges. That is usually enough to tell a media-server
+canvas problem from a page problem, and to catch a display running a cached copy
+of an older page.
 
 ## How the screens are built
 
