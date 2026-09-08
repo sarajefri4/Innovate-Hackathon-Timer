@@ -66,6 +66,11 @@ const DEFAULT_HACK_MS = 6 * 60 * 60 * 1000 + 30 * 60 * 1000; // 6h 30m
 const DEFAULT_SEGMENT_MS = 5 * 60 * 1000;                    // 5m demo, 5m judges
 const DEFAULT_TEAMS = 13;
 
+// The screen shape the artwork is drawn for: 0.60 m x 2.70 m, which is 1:4.5.
+// Any unit will do — only the ratio is ever used.
+const DEFAULT_PANEL_W = 0.6;
+const DEFAULT_PANEL_H = 2.7;
+
 const state = {
   rev: 0,
   program: 'hacking',
@@ -85,6 +90,14 @@ const state = {
 
   message: '',
   blackout: false,
+
+  // How the displays should lay themselves out. A browser can measure the frame
+  // it was given but never the wall that frame ends up on, so the shape of the
+  // screen is something only the operator knows — this is where they say it.
+  panelW: DEFAULT_PANEL_W,
+  panelH: DEFAULT_PANEL_H,
+  panelFill: true,         // paint corner to corner rather than letterboxing
+
   updatedAt: Date.now(),
 };
 
@@ -113,6 +126,9 @@ function snapshot() {
     segment: state.segment,
     message: state.message,
     blackout: state.blackout,
+    panelW: state.panelW,
+    panelH: state.panelH,
+    panelFill: state.panelFill,
     serverTime: Date.now(),
     displays: countClients('display'),
     admins: countClients('admin'),
@@ -287,6 +303,15 @@ function applyAction(action, payload = {}) {
     case 'blackout':
       state.blackout = !!payload.blackout;
       break;
+
+    case 'panel': {
+      // Only the ratio matters, so the numbers are kept as given — metres,
+      // millimetres or pixels all read back to the operator unchanged.
+      if (payload.panelW != null) state.panelW = clamp(num(payload.panelW, DEFAULT_PANEL_W), 0.01, 10000);
+      if (payload.panelH != null) state.panelH = clamp(num(payload.panelH, DEFAULT_PANEL_H), 0.01, 10000);
+      if (payload.panelFill != null) state.panelFill = !!payload.panelFill;
+      break;
+    }
 
     default:
       return { ok: false, error: 'Unknown action: ' + action };

@@ -35,6 +35,10 @@ needed again.
 
 Every screen must be on the same network as the server.
 
+**The server holds the screen shape, so it has to be restarted after an update**
+— and restarting also puts the timer back to its defaults, so do it before the
+event rather than during it.
+
 ### The two programs
 
 **Hacking time** — the challenge clock. Default 6 h 30 m, set in hours and
@@ -91,9 +95,31 @@ layout, which takes the column apart and re-composes it for 16:9: the wordmark,
 the phase headline and the strapline down one side, the clock across the other.
 Force either with `?mode=column` or `?mode=hd`.
 
-The column artwork is 1:4.5 — a 0.60 × 2.70 m panel exactly. On a frame of that
-shape it fills the screen; on a frame of any other shape it is letterboxed, so
-nothing is ever stretched or cropped.
+The column artwork is 1:4.5 — a 0.60 × 2.70 m panel exactly.
+
+### Screen shape, from the admin page
+
+A browser can measure the frame it was handed but never the wall that frame ends
+up on. So the shape of the screen is something only you know, and the **Screen
+shape** card on the admin page is where you say it — width and height in any
+unit (only the ratio is read), and whether to stretch to fill the frame. It
+lands on every display at once, live, like every other control.
+
+It starts at **0.60 × 2.70 m, stretch on**, which is the artwork's own shape.
+Leave it alone and the column screens are right without a single URL parameter.
+
+*Stretch to fill the frame* is the setting that matters. Leave it **on** whenever
+anything downstream — an LED processor, a media server — maps the browser's
+frame onto the panel: the page then ignores the frame's shape entirely, takes its
+layout from the size you typed, and paints the artwork corner to corner for the
+processor to map. Turn it **off** when a browser is driving a screen directly and
+you would rather see black bars than any stretch at all; each display then reads
+its own frame, as it used to.
+
+A mixed estate still works: the shape card is what the column screens follow, and
+a TV or a laptop that should show the landscape composition is opened with
+`?mode=hd`, which overrides it. `?fit=fill` and `?fit=contain` override the
+stretch setting the same way, per screen.
 
 ### Driving a column through an LED processor or media server
 
@@ -105,16 +131,11 @@ eight times sideways onto the column. The design ends up crushed into a strip
 down the left of the panel with the blurred backdrop filling the rest.
 
 The page cannot detect this: a stretched canvas looks exactly like an ordinary
-one from inside the browser. Tell it, with **`?fit=fill`**:
-
-```
-http://<server>:3000/display?fit=fill
-```
-
-`fit=fill` means *something downstream owns the geometry*. The page stops reading
-the frame's shape entirely — it always uses the column layout and paints the
-artwork corner to corner, live digits and unit words stretching with it. The
-processor's own squeeze then puts everything back into proportion on the wall.
+one from inside the browser. It has to be told — which is what the **Screen
+shape** card does, and why it is on by default. With it set to 0.60 × 2.70 m and
+*stretch to fill the frame* ticked, plain `/display` is correct on the wall
+whatever canvas Kompass renders it at. (`?fit=fill` on the URL does the same for
+one screen on its own.)
 
 Set the layer to cover the whole LED output, and don't letterbox it in Kompass
 either.

@@ -73,6 +73,8 @@
   }
   input:focus{outline:none;border-color:var(--brand)}
   label.f{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+  label.check{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px}
+  label.check input{width:16px;height:16px;flex:0 0 auto;accent-color:var(--brand);cursor:pointer}
   .field{margin-bottom:14px}
   .hms{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .hms small{display:block;text-align:center;font-size:10px;letter-spacing:.14em;color:var(--dim);margin-top:5px}
@@ -153,9 +155,29 @@
           <button class="grow mini" id="btnCopyHd">Copy HD link</button>
         </div>
         <div class="sub" style="margin-top:9px">
-          A screen picks its own layout from its shape; the HD link forces the
-          landscape one.
+          A screen picks its layout from the shape set below; the HD link forces
+          the landscape one for a TV or a laptop.
         </div>
+      </div>
+
+      <div class="card">
+        <h3>Screen shape</h3>
+        <div class="row tight">
+          <div class="grow"><label class="f">Width</label><input type="number" id="inPanelW" min="0.01" max="10000" step="0.01" value="0.6"></div>
+          <div class="grow"><label class="f">Height</label><input type="number" id="inPanelH" min="0.01" max="10000" step="0.01" value="2.7"></div>
+        </div>
+        <div class="sub" style="margin-top:7px">
+          Any unit — metres, millimetres, pixels. Only the ratio is used.
+        </div>
+        <div class="row tight" style="margin-top:10px">
+          <button class="mini shape" data-w="0.6" data-h="2.7">Column 0.6 × 2.7 m</button>
+          <button class="mini shape" data-w="16" data-h="9">HD 16:9</button>
+        </div>
+        <label class="check" style="margin-top:12px">
+          <input type="checkbox" id="inPanelFill" checked>
+          <span>Stretch to fill the frame</span>
+        </label>
+        <div class="sub" style="margin-top:6px" id="panelNote"></div>
       </div>
     </div>
 
@@ -422,6 +444,13 @@
       $('btnNext').disabled = index >= s.teams * 2 - 1;
     }
 
+    if (!shapeTouched) {
+      $('inPanelW').value = s.panelW;
+      $('inPanelH').value = s.panelH;
+      $('inPanelFill').checked = !!s.panelFill;
+      describeShape();
+    }
+
     refreshScreens();
     if (!formTouched) seedForm(s);
   }
@@ -584,6 +613,44 @@
   };
   $('btnCopy').onclick = () => copy(displayUrl);
   $('btnCopyHd').onclick = () => copy(displayUrl + '?mode=hd');
+
+  // ---- screen shape -------------------------------------------------------
+  // A browser can measure the frame it was handed but never the wall that frame
+  // ends up on. This is where the operator says what shape the wall is, and
+  // whether something downstream (an LED processor, a media server such as
+  // Kompass FX3) is mapping the frame onto it.
+  let shapeTouched = false;
+  const pushShape = () => control('panel', {
+    panelW: parseFloat($('inPanelW').value) || 0.6,
+    panelH: parseFloat($('inPanelH').value) || 2.7,
+    panelFill: $('inPanelFill').checked,
+  }, 'Screen shape sent to all displays');
+
+  $('inPanelW').oninput = $('inPanelH').oninput = () => { shapeTouched = true; describeShape(); };
+  $('inPanelW').onchange = $('inPanelH').onchange = () => { shapeTouched = false; pushShape(); };
+  $('inPanelFill').onchange = pushShape;
+  document.querySelectorAll('.shape').forEach((b) => {
+    b.onclick = () => {
+      $('inPanelW').value = b.dataset.w;
+      $('inPanelH').value = b.dataset.h;
+      shapeTouched = false;
+      pushShape();
+    };
+  });
+
+  /** Say, in words, what the numbers in the boxes mean for the screens. */
+  function describeShape() {
+    const w = parseFloat($('inPanelW').value), h = parseFloat($('inPanelH').value);
+    if (!(w > 0 && h > 0)) { $('panelNote').textContent = ''; return; }
+    const r = h / w;
+    const column = r >= 2.2;
+    const native = Math.abs(r / (6479 / 1440) - 1) < 0.02;
+    $('panelNote').textContent = '1 : ' + r.toFixed(2) + ' — '
+      + (column ? 'column layout' : 'landscape (HD) layout')
+      + (native ? ', exactly the artwork' : '')
+      + (column && !native ? ', artwork letterboxed' : '')
+      + '.';
+  }
 
   // Shortcuts, but never while the operator is typing in a field.
   document.addEventListener('keydown', (e) => {
