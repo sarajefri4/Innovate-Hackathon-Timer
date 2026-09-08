@@ -98,23 +98,32 @@ nothing is ever stretched or cropped.
 ### Driving a column through an LED processor or media server
 
 Software like **NovaStar Kompass FX3** renders a web page onto a canvas of *its
-own* size and then maps that canvas onto the panel. The browser is handed, say,
-a 1080 × 1920 frame and has no way to know the wall is 1:4.5 — so it letterboxes
-against the frame it was given, and the result on the wall is the design squeezed
-into part of the screen with black either side.
+own* size and then stretches that canvas onto the panel. The canvas is usually
+landscape — 1920 × 1080 — so the browser is handed a 16:9 frame, picks the HD
+layout for it, and the processor then squashes that landscape composition about
+eight times sideways onto the column. The design ends up crushed into a strip
+down the left of the panel with the blurred backdrop filling the rest.
 
-Add **`?fit=fill`** for this case:
+The page cannot detect this: a stretched canvas looks exactly like an ordinary
+one from inside the browser. Tell it, with **`?fit=fill`**:
 
 ```
-http://<server>:3000/display?mode=column&fit=fill
+http://<server>:3000/display?fit=fill
 ```
 
-The artwork is then painted corner to corner over whatever frame the media server
-provides, live digits and unit words stretching with it, and the processor's own
-mapping puts it back into proportion on the panel. In Kompass, give the webpage
-layer the panel's aspect ratio if you can — but with `fit=fill` it looks right
-either way. Set the layer to cover the whole output; do not letterbox it there
-as well.
+`fit=fill` means *something downstream owns the geometry*. The page stops reading
+the frame's shape entirely — it always uses the column layout and paints the
+artwork corner to corner, live digits and unit words stretching with it. The
+processor's own squeeze then puts everything back into proportion on the wall.
+
+Set the layer to cover the whole LED output, and don't letterbox it in Kompass
+either.
+
+**Better, if the option is there:** give the webpage layer a *tall* resolution —
+the panel's own pixel count, or something like 480 × 2160. Then nothing is
+stretched at any point in the chain and no horizontal detail is thrown away.
+`fit=fill` is correct either way, and is the one to reach for when the canvas
+size is fixed or unknown.
 
 ### When a screen looks wrong
 

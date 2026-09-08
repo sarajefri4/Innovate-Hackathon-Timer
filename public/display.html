@@ -184,6 +184,10 @@
 
   function chooseMode() {
     if (mode) return mode;
+    // fit=fill says something downstream owns the geometry, and the only thing
+    // that does is a column panel — so the shape of the frame this page was
+    // handed says nothing about the shape of the wall, and must not be read.
+    if (fit === 'fill') return 'column';
     // The landscape composition is built for 16:9 and bursts its frame on
     // anything taller than it is wide — a portrait frame always gets the
     // column, letterboxed if need be, which at worst shows the design small
