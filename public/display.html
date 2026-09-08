@@ -250,7 +250,10 @@
   let art = (u) => '/' + u;
 
   fetch('/screens.json').then((r) => r.json()).then((d) => {
-    if (d.rev) art = (u) => '/' + u + '?v=' + d.rev;
+    // Without a stamp the server predates this and its artwork would be
+    // served from cache for a day; a per-load stamp costs a re-download and
+    // is always right, which on a wall is the better trade.
+    art = (u) => '/' + u + '?v=' + (d.rev || Date.now());
     for (const s of d.screens) screens[s.id] = s;
     // Warm the cache so switching screens is instant on the night.
     for (const s of d.screens) { const i = new Image(); i.src = art(s.src); }

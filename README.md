@@ -227,9 +227,10 @@ the rows they now belong to.
 **The strategic-partner row.** The artwork was signed off with Tuwaiq Academy and
 Digital Saudi alone. `Assets/logos2-04.png` is the current row — Site, Digital
 Saudi, Tuwaiq Academy, HUMAIN under their Arabic and English heading — and it is
-set in place of the designed lockup, keeping the design's own right-hand margin
-and growing left as far as the PIF mark allows. Drop a new file in under that
-name and re-run to change the partners again.
+set in place of the designed lockup, keeping the design's own right-hand margin.
+`PARTNER_WIDTH` in `tools/prepare.py` is how much of the column it takes and so
+how large it is; it leaves the PIF mark air rather than filling the row. Drop a
+new file in under that name and re-run to change the partners again.
 
 Re-run `python3 tools/prepare.py` whenever anything in `Assets/` changes. Each
 run stamps the manifest with a build id that every artwork URL carries, so the

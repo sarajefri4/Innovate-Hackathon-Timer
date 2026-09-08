@@ -49,7 +49,8 @@ JPEG_Q = 88
 # strategic-partner row, header and all — is set in its place, scaled to the
 # width between the PIF mark and the right-hand margin the design already uses.
 PARTNER_BAND = 0.045      # the top strip, as a fraction of the height
-PARTNER_GAP = 0.035       # clearance from the PIF lockup, as a fraction of width
+PARTNER_WIDTH = 0.52      # how much of the width the row takes
+PARTNER_GAP = 0.07        # least clearance from the PIF lockup, same units
 PARTNER_ART = "logos2-04.png"
 
 # --- how many rows the countdown gets --------------------------------------
@@ -309,10 +310,10 @@ def add_partners(arr, W, H):
     """
     Swap the designed partner lockup for the current one.
 
-    The replacement keeps the design's own right-hand margin and grows left as
-    far as the PIF mark allows, which is what sets its size — it carries a
+    The replacement keeps the design's own right-hand margin. It carries a
     header line the designed lockup did not, so it is a wider piece of artwork
-    for the same row.
+    for the same row — sized to leave the PIF mark plenty of air rather than
+    filling everything the row will hold, which crowds the two together.
     """
     logo = load_partner(PARTNER_ART)
     if logo is None:
@@ -325,9 +326,9 @@ def add_partners(arr, W, H):
     if old is None:
         return arr
     bx0, by0, bx1, by1 = old
-    left = (pif[2] if pif else 0) + PARTNER_GAP * W
+    limit = bx1 - ((pif[2] if pif else 0) + PARTNER_GAP * W)
 
-    avail_w = bx1 - left
+    avail_w = min(PARTNER_WIDTH * W, limit)
     avail_h = band * 0.86
     scale = min(avail_w / logo.width, avail_h / logo.height)
     w = max(1, round(logo.width * scale))
