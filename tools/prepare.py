@@ -22,6 +22,7 @@ Run:  python3 tools/prepare.py        (server.js runs it automatically once)
 import json
 import os
 import sys
+import time
 
 import numpy as np
 from PIL import Image, ImageFilter
@@ -40,6 +41,22 @@ DRAFT = 4
 OUT_W = 1440          # plate width delivered to the browser
 CROP_W = 900          # artwork pieces the HD layout re-composes
 JPEG_Q = 88
+
+# --- the strategic-partner row across the top ------------------------------
+# The artwork carries PIF on the left and a Tuwaiq Academy | Digital Saudi
+# lockup on the right. More partners joined after the artwork was signed off,
+# so the designed lockup is lifted out and the supplied replacement — the full
+# strategic-partner row, header and all — is set in its place, scaled to the
+# width between the PIF mark and the right-hand margin the design already uses.
+PARTNER_BAND = 0.045      # the top strip, as a fraction of the height
+PARTNER_GAP = 0.035       # clearance from the PIF lockup, as a fraction of width
+PARTNER_ART = "logos2-04.png"
+
+# --- how many rows the countdown gets --------------------------------------
+# The artwork was drawn with two (hours, minutes) or one (minutes). Seconds are
+# added below, and the whole stack is scaled to fit the space the artwork
+# leaves above whatever comes next.
+CLOCK_ROWS = {2: ["hours", "minutes", "seconds"], 1: ["minutes", "seconds"]}
 
 # --- where the designed timer lives, as fractions of the image -------------
 # Bands are deliberately loose: the exact ink bounds are measured inside them.
@@ -264,6 +281,113 @@ def erase(arr, lum, boxes, pad=None):
     return np.clip(out, 0, 255).astype(np.uint8)
 
 
+def load_partner(name):
+    """The supplied partner lockup, trimmed to its ink."""
+    path = os.path.join(SRC_DIR, name)
+    if not os.path.exists(path):
+        return None
+    im = Image.open(path).convert("RGBA")
+    return im.crop(im.getbbox())
+
+
+def paste_rgba(arr, rgba, x, y):
+    """Alpha-composite an RGBA image onto the uint8 RGB plate, in place."""
+    h, w = rgba.height, rgba.width
+    H, W = arr.shape[:2]
+    x, y = int(round(x)), int(round(y))
+    x0, y0 = max(0, x), max(0, y)
+    x1, y1 = min(W, x + w), min(H, y + h)
+    if x1 <= x0 or y1 <= y0:
+        return
+    src = np.asarray(rgba, np.float32)[y0 - y:y1 - y, x0 - x:x1 - x]
+    a = src[..., 3:4] / 255.0
+    dst = arr[y0:y1, x0:x1].astype(np.float32)
+    arr[y0:y1, x0:x1] = np.clip(dst * (1 - a) + src[..., :3] * a, 0, 255).astype(np.uint8)
+
+
+def add_partners(arr, W, H):
+    """
+    Swap the designed partner lockup for the current one.
+
+    The replacement keeps the design's own right-hand margin and grows left as
+    far as the PIF mark allows, which is what sets its size — it carries a
+    header line the designed lockup did not, so it is a wider piece of artwork
+    for the same row.
+    """
+    logo = load_partner(PARTNER_ART)
+    if logo is None:
+        return arr
+
+    lum = arr.max(axis=2).astype(np.float32)
+    band = int(PARTNER_BAND * H)
+    old = ink_box(lum, 0, band, int(0.40 * W), W, thr=110, min_px=3)
+    pif = ink_box(lum, 0, band, 0, int(0.38 * W), thr=110, min_px=3)
+    if old is None:
+        return arr
+    bx0, by0, bx1, by1 = old
+    left = (pif[2] if pif else 0) + PARTNER_GAP * W
+
+    avail_w = bx1 - left
+    avail_h = band * 0.86
+    scale = min(avail_w / logo.width, avail_h / logo.height)
+    w = max(1, round(logo.width * scale))
+    h = max(1, round(logo.height * scale))
+
+    out = erase(arr, lum, [old], pad=int(0.006 * H))
+    paste_rgba(out, logo.resize((w, h), Image.LANCZOS), bx1 - w, (by0 + by1) / 2 - h / 2)
+    return out
+
+
+def first_ink_below(lum, W, H, y):
+    """Where the artwork next has something to say, below row `y`."""
+    rows = (lum[int(y):] > 150).sum(axis=1) > W * 0.004
+    hit = np.where(rows)[0]
+    return int(y) + int(hit[0]) if len(hit) else H
+
+
+def clock_rows(measured, lum, W, H, units):
+    """
+    Place one row of digits per unit, in the space the artwork leaves.
+
+    The designed rows give the proportions — block height, the drop to the unit
+    word, the pitch from one row to the next. Adding a row needs more height
+    than the design left, so the whole stack is scaled about its top until the
+    last unit word clears whatever the artwork draws underneath.
+    """
+    m0 = measured[0]
+    dx0, dy0, dx1, dy1 = m0["digits"]
+    lab = m0["label"]
+    row_h = (lab[3] - dy0) if lab else (dy1 - dy0) * 1.44
+    pitch = (measured[1]["digits"][1] - dy0) if len(measured) > 1 else row_h * 1.40
+
+    last = measured[-1]
+    below = last["label"][3] if last["label"] else last["digits"][3]
+    # Clear of whatever comes next by a comfortable margin — a unit word that
+    # only just misses the tagline underneath it reads as a collision.
+    limit = first_ink_below(lum, W, H, below + 0.004 * H) - 0.024 * H
+
+    n = len(units)
+    total = (n - 1) * pitch + row_h
+    k = min(1.0, (limit - dy0) / total) if total > 0 else 1.0
+
+    cx = (dx0 + dx1) / 2
+    dw, dh = (dx1 - dx0) * k, (dy1 - dy0) * k
+    lab_dy = (lab[1] - dy0) * k if lab else dh * 1.20
+    lab_h = (lab[3] - lab[1]) * k if lab else dh * 0.15
+    lab_w = (lab[2] - lab[0]) * k if lab else dw * 0.6
+
+    rows = []
+    for i, unit in enumerate(units):
+        top = dy0 + i * pitch * k
+        rows.append(dict(
+            unit=unit,
+            digits=(cx - dw / 2, top, cx + dw / 2, top + dh),
+            label=(cx - lab_w / 2, top + lab_dy, cx + lab_w / 2, top + lab_dy + lab_h),
+            gap=m0["gap"] / (dx1 - dx0),
+        ))
+    return rows
+
+
 def content_bands(lum, H, W, lo, hi, min_h=8):
     """Row runs that contain ink between two fractional heights."""
     y0, y1 = int(lo * H), int(hi * H)
@@ -364,6 +488,9 @@ def main():
         im = im.convert("RGB")
         W, H = im.size
         arr = np.asarray(im)
+        # Re-set the partner row first, so the plate, the HD crops and the
+        # blurred backdrop all carry it.
+        arr = add_partners(arr, W, H)
         lum = arr.max(axis=2).astype(np.float32)
 
         measured = [m for m in (measure_slot(lum, W, H, s) for s in slots) if m]
@@ -386,25 +513,26 @@ def main():
         plate_name = "%s.jpg" % sid
         plate_small.save(os.path.join(OUT_DIR, plate_name), quality=JPEG_Q, optimize=True, progressive=True)
 
-        # --- label patches: only needed when the unit itself has to change ----
-        slot_meta = []
-        for i, m in enumerate(measured):
-            dx0, dy0, dx1, dy1 = m["digits"]
-            entry = dict(
-                unit=m["unit"],
-                x=dx0 / W, y=dy0 / H, w=(dx1 - dx0) / W, h=(dy1 - dy0) / H,
-                gap=m["gap"] / (dx1 - dx0),
-            )
-            if m["label"]:
+        # --- the clock, re-laid with a row per unit ---------------------------
+        # Adding seconds moves every row, so the designed unit words can no
+        # longer be left in place: each is covered with a patch of its own
+        # background and all of them are re-drawn where the new rows put them.
+        slot_meta, patch_meta = [], []
+        if measured:
+            units = CLOCK_ROWS.get(len(measured), [m["unit"] for m in measured])
+            label_colour = accent
+            for i, m in enumerate(measured):
+                if not m["label"]:
+                    continue
                 lx0, ly0, lx1, ly1 = m["label"]
                 # The unit words are dimmer than the digits; match them exactly
-                # so a re-rendered label sits beside a designed one unnoticed.
+                # so a re-drawn label reads as the designed one.
                 lreg = arr[ly0:ly1, lx0:lx1].astype(np.float32)
                 lmask = lum[ly0:ly1, lx0:lx1]
                 bright = lmask >= np.percentile(lmask, 96)
-                label_colour = hexes(lreg[bright].mean(axis=0)) if bright.sum() else accent
-                px = int(0.030 * W)
-                py = int(0.006 * H)
+                if bright.sum():
+                    label_colour = hexes(lreg[bright].mean(axis=0))
+                px, py = int(0.030 * W), int(0.006 * H)
                 bx0, by0 = max(0, lx0 - px), max(0, ly0 - py)
                 bx1, by1 = min(W, lx1 + px), min(H, ly1 + py)
                 patched = erase(arr, lum, [m["label"]], pad=int(0.005 * H))
@@ -413,19 +541,29 @@ def main():
                 patch = patch.resize((pw, max(1, round(pw * (by1 - by0) / (bx1 - bx0)))), Image.LANCZOS)
                 pname = "%s-label%d.jpg" % (sid, i)
                 patch.save(os.path.join(OUT_DIR, pname), quality=JPEG_Q, optimize=True)
-                entry["label"] = dict(
-                    x=lx0 / W, y=ly0 / H, w=(lx1 - lx0) / W, h=(ly1 - ly0) / H,
-                    colour=label_colour,
-                    patch="screens/" + pname,
-                    patchX=bx0 / W, patchY=by0 / H,
-                    patchW=(bx1 - bx0) / W, patchH=(by1 - by0) / H,
-                )
-            slot_meta.append(entry)
+                patch_meta.append(dict(
+                    src="screens/" + pname,
+                    x=bx0 / W, y=by0 / H, w=(bx1 - bx0) / W, h=(by1 - by0) / H,
+                ))
+
+            for row in clock_rows(measured, lum, W, H, units):
+                dx0, dy0, dx1, dy1 = row["digits"]
+                lx0, ly0, lx1, ly1 = row["label"]
+                slot_meta.append(dict(
+                    unit=row["unit"],
+                    x=dx0 / W, y=dy0 / H, w=(dx1 - dx0) / W, h=(dy1 - dy0) / H,
+                    gap=row["gap"],
+                    label=dict(
+                        x=lx0 / W, y=ly0 / H, w=(lx1 - lx0) / W, h=(ly1 - ly0) / H,
+                        colour=label_colour,
+                    ),
+                ))
 
         # --- artwork pieces the HD layout reuses ------------------------------
-        top_of_timer = min((m["digits"][1] for m in measured), default=int(0.62 * H))
+        top_of_timer = min((s["y"] * H for s in slot_meta), default=int(0.62 * H))
         bottom_of_timer = max(
-            ((m["label"][3] if m["label"] else m["digits"][3]) for m in measured),
+            (((s["label"]["y"] + s["label"]["h"]) if s.get("label") else s["y"] + s["h"]) * H
+             for s in slot_meta),
             default=int(0.66 * H),
         )
         # Pieces the landscape layout re-composes. A screen with a countdown
@@ -464,11 +602,17 @@ def main():
         manifest.append(dict(
             id=sid, source=fname, program=program, name=name,
             src="screens/" + plate_name, bg="screens/" + bg_name,
-            w=OUT_W, h=out_h, accent=accent, slots=slot_meta, crops=crops,
+            w=OUT_W, h=out_h, accent=accent,
+            slots=slot_meta, patches=patch_meta, crops=crops,
         ))
 
+    # A build stamp for the artwork. The plates are served with a long cache —
+    # they never change *within* a build — so every URL carries this, and a
+    # re-run reaches screens that would otherwise sit on yesterday's copy for a
+    # day. Media-server browsers in particular never look again on their own.
+    rev = str(int(time.time()))
     with open(os.path.join(OUT_DIR, "manifest.json"), "w") as f:
-        json.dump(dict(version=1, screens=manifest), f, indent=1)
+        json.dump(dict(version=1, rev=rev, screens=manifest), f, indent=1)
     print("  → %d screens written to public/screens/" % len(manifest))
 
 

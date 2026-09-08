@@ -84,11 +84,19 @@
   body.noclock #hdClock,body.noclock #hdDone{display:none}
   body.noclock #hdLeft.empty{display:none}
 
-  #hdClock{display:flex;align-items:flex-start;justify-content:center;gap:4vw;max-width:100%}
+  #hdClock{display:flex;align-items:flex-start;justify-content:center;
+           gap:4vw;max-width:100%;--clockH:34vh}
+  /* Three rows of digits on the column become three groups side by side here.
+     They need more of the frame than two did, and a wider gap between them —
+     at three across, a gap only twice the space between two digits stops
+     reading as a division and the clock runs together as one number. */
+  body.threerow #hdLeft{flex:0 0 26%}
+  body.threerow #hdClock{gap:5.5vw;--clockH:23vh}
   #hdClock .grp{display:flex;flex-direction:column;align-items:center;gap:2vh;min-width:0;max-width:100%}
-  /* 34vh is the size on a 16:9 wall. The vw cap stops the digits bursting out
-     of the frame — and over the headline — on anything squarer or taller. */
-  #hdClock svg{height:min(34vh,30vw);width:auto;max-width:100%;
+  /* The vh size is the one for a 16:9 wall. The vw cap stops the digits
+     bursting out of the frame — and over the headline — on anything squarer or
+     taller. */
+  #hdClock svg{height:min(var(--clockH),30vw);width:auto;max-width:100%;
                overflow:visible;filter:drop-shadow(0 0 1.4vh var(--glow,transparent))}
   #hdClock svg path{fill:var(--accent)}
   #hdClock .lbl{font-size:2.3vh;font-weight:300;letter-spacing:.34em;text-indent:.34em;
@@ -235,10 +243,17 @@
   let screens = {}, state = null, current = null;
   let slotEls = [];
 
+  // Artwork is cached hard — it cannot change within a build — so every URL
+  // carries the build's stamp. Re-running tools/prepare.py then reaches screens
+  // that would otherwise sit on the previous artwork for a day; a media
+  // server's embedded browser would never look again at all.
+  let art = (u) => '/' + u;
+
   fetch('/screens.json').then((r) => r.json()).then((d) => {
+    if (d.rev) art = (u) => '/' + u + '?v=' + d.rev;
     for (const s of d.screens) screens[s.id] = s;
     // Warm the cache so switching screens is instant on the night.
-    for (const s of d.screens) { const i = new Image(); i.src = '/' + s.src; }
+    for (const s of d.screens) { const i = new Image(); i.src = art(s.src); }
     if (state) paint();
   });
 
@@ -333,8 +348,8 @@
     lastPanel = panel;
     if (current !== s) {
       current = s;
-      $('plate').src = '/' + s.src;
-      $('hdBg').src = '/' + s.bg;
+      $('plate').src = art(s.src);
+      $('hdBg').src = art(s.bg);
       const rgb = s.accent.match(/\w\w/g).map((h) => parseInt(h, 16)).join(',');
       document.documentElement.style.setProperty('--accent', s.accent);
       document.documentElement.style.setProperty('--glow', `rgba(${rgb},.4)`);
@@ -355,13 +370,30 @@
 
   function setCrop(id, crop) {
     const el = $(id);
-    if (crop) { el.src = '/' + crop.src; el.hidden = false; }
+    if (crop) { el.src = art(crop.src); el.hidden = false; }
     else { el.removeAttribute('src'); el.hidden = true; }
   }
 
   function buildSlots(s) {
     const box = $('plateBox');
     box.querySelectorAll('.slot').forEach((n) => n.remove());
+
+    // The designed unit words sit where the artwork's two-row clock put them.
+    // Adding a seconds row moves every row, so each designed word is covered
+    // with a patch of its own background and re-drawn where the new rows are.
+    // Patches go down first: a later row's digits pass over an earlier row's
+    // patch, and must sit on top of it.
+    for (const p of s.patches || []) {
+      const el = document.createElement('div');
+      el.className = 'slot';
+      el.style.left = p.x * 100 + '%';
+      el.style.top = p.y * 100 + '%';
+      el.style.width = p.w * 100 + '%';
+      el.style.height = p.h * 100 + '%';
+      el.innerHTML = '<img class="patch" src="' + art(p.src) + '" alt="">';
+      box.appendChild(el);
+    }
+
     slotEls = s.slots.map((slot) => {
       const el = document.createElement('div');
       el.className = 'slot';
@@ -376,13 +408,12 @@
       if (slot.label) {
         label = document.createElement('div');
         label.className = 'slot';
-        label.style.left = slot.label.patchX * 100 + '%';
-        label.style.top = slot.label.patchY * 100 + '%';
-        label.style.width = slot.label.patchW * 100 + '%';
-        label.style.height = slot.label.patchH * 100 + '%';
-        label.hidden = true;
-        label.innerHTML = '<img class="patch" src="/' + slot.label.patch + '" alt="">'
-          + '<div class="unit" style="color:' + (slot.label.colour || s.accent) + '"></div>';
+        label.style.left = slot.label.x * 100 + '%';
+        label.style.top = slot.label.y * 100 + '%';
+        label.style.width = slot.label.w * 100 + '%';
+        label.style.height = slot.label.h * 100 + '%';
+        label.innerHTML = '<div class="unit" style="color:'
+          + (slot.label.colour || s.accent) + '">' + slot.unit.toUpperCase() + '</div>';
         box.appendChild(label);
       }
       return { slot, el, svg: el.querySelector('svg'), path: el.querySelector('path'), label };
@@ -390,6 +421,7 @@
   }
 
   function buildHdClock(s) {
+    document.body.classList.toggle('threerow', s.slots.length >= 3);
     $('hdClock').innerHTML = s.slots.map(() =>
       '<div class="grp"><svg preserveAspectRatio="xMidYMid meet"><path/></svg><div class="lbl"></div></div>'
     ).join('');
@@ -403,7 +435,7 @@
     const ms = clock.remaining(state);
     const done = state.status === 'finished';
     const live = state.status === 'running';
-    const faces = Screen7.faces(ms, current.slots.length);
+    const faces = Screen7.faces(ms, current.slots.map((s) => s.unit));
     const urgent = live && ms > 0 && ms <= 60000;
 
     document.body.classList.toggle('blackout', !!state.blackout);
@@ -420,14 +452,6 @@
         s.path.setAttribute('d', shape.d);
       }
       s.el.classList.toggle('urgent', urgent);
-      // The unit words are part of the artwork. Only when the countdown has to
-      // change unit do we cover them and set our own.
-      if (s.label) {
-        const baked = s.slot.unit.toUpperCase();
-        const swap = face.unit !== baked;
-        s.label.hidden = !swap;
-        if (swap) s.label.querySelector('.unit').textContent = face.unit;
-      }
     });
 
     // Landscape composition.

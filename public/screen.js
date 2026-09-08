@@ -59,24 +59,25 @@
   }
 
   // --- clock ---------------------------------------------------------------
-  /** Split a duration the way the artwork's two-slot layout wants it. */
-  function faces(ms, slotCount) {
+  /**
+   * Split a duration across the units a screen has rows for.
+   *
+   * `units` is the screen's own list, in order, from the manifest — e.g.
+   * ['hours','minutes','seconds'] on the challenge screens and
+   * ['minutes','seconds'] on the presentation ones. A screen with no hours row
+   * rolls the hours into its minutes rather than losing them.
+   */
+  function faces(ms, units) {
+    const list = Array.isArray(units) ? units.map((u) => String(u).toUpperCase())
+               : units >= 2 ? ['HOURS', 'MINUTES'] : ['MINUTES'];
     const total = Math.max(0, Math.floor(ms / 1000));
-    const h = Math.floor(total / 3600);
-    const m = Math.floor((total % 3600) / 60);
-    const s = total % 60;
     const pad = (n) => String(Math.min(99, n)).padStart(2, '0');
-    if (slotCount >= 2) {
-      // Hours and minutes while there is an hour left, then minutes and
-      // seconds — so the final stretch still counts down visibly.
-      return h > 0
-        ? [{ v: pad(h), unit: 'HOURS' }, { v: pad(m), unit: 'MINUTES' }]
-        : [{ v: pad(m), unit: 'MINUTES' }, { v: pad(s), unit: 'SECONDS' }];
-    }
-    // One slot: whole minutes, dropping to seconds for the last one.
-    return total >= 60
-      ? [{ v: pad(Math.floor(total / 60)), unit: 'MINUTES' }]
-      : [{ v: pad(total), unit: 'SECONDS' }];
+    const v = {
+      HOURS: Math.floor(total / 3600),
+      MINUTES: list.includes('HOURS') ? Math.floor((total % 3600) / 60) : Math.floor(total / 60),
+      SECONDS: total % 60,
+    };
+    return list.map((u) => ({ v: pad(v[u] || 0), unit: u }));
   }
 
   // --- server clock offset -------------------------------------------------

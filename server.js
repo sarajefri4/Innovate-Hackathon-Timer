@@ -52,7 +52,12 @@ function ensureScreens() {
 }
 
 ensureScreens();
-const SCREENS = JSON.parse(fs.readFileSync(MANIFEST, 'utf8')).screens;
+const ARTWORK = JSON.parse(fs.readFileSync(MANIFEST, 'utf8'));
+const SCREENS = ARTWORK.screens;
+// Build stamp for the prepared artwork. Plates are cached for a day — they
+// cannot change within a build — so the pages hang this on every artwork URL,
+// and re-running tools/prepare.py reaches the screens straight away.
+const ART_REV = String(ARTWORK.rev || Date.now());
 
 /** Screens the admin may pick for a program, in the order they run. */
 const MENU = {
@@ -401,7 +406,7 @@ const server = http.createServer(async (req, res) => {
   if (route === '/time') return send(res, 200, { t: Date.now() });
 
   if (route === '/state') return send(res, 200, snapshot());
-  if (route === '/screens.json') return send(res, 200, { screens: SCREENS, menu: MENU });
+  if (route === '/screens.json') return send(res, 200, { rev: ART_REV, screens: SCREENS, menu: MENU });
 
   if (route === '/events') {
     const role = url.searchParams.get('role') === 'admin' ? 'admin' : 'display';

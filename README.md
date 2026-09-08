@@ -205,19 +205,37 @@ so a live clock can go in their place. For each image it:
    flattening them,
 3. records the exact position, size, gap and colour of every block,
 4. cuts out the pieces the HD layout re-composes,
-5. writes it all to `public/screens/` with a `manifest.json`.
+5. swaps the designed partner lockup for the current one,
+6. writes it all to `public/screens/` with a `manifest.json`.
 
 The browser then redraws the digits as SVG in the same seven-segment face,
 measured off the artwork: a 350 × 612 cell, an 88-unit stroke, ends mitred at
 45°, and the cell's own corner chamfer where a segment meets it. Positioned from
 the manifest, live digits land exactly where the designed ones were.
 
-The unit words are left in the artwork and used as they are. Only when the
-countdown has to change unit — under an hour, when *hours / minutes* becomes
-*minutes / seconds* — does a screen cover the designed word with its own patch
-and set the new one to match.
+It also does two things the artwork does not:
 
-Re-run `python3 tools/prepare.py` if the artwork in `Assets/` ever changes.
+**A row per unit.** The design has two blocks — hours and minutes — and the
+challenge screens run three: hours, minutes, seconds (the presentation screens
+run minutes and seconds). A third row needs more height than the design left, so
+the whole stack is scaled about its top until the last unit word clears whatever
+the artwork draws underneath it, measured off the plate itself. Because every row
+moves, the designed unit words can no longer be left where they are: each is
+covered with a patch of its own background and all of them are re-drawn beside
+the rows they now belong to.
+
+**The strategic-partner row.** The artwork was signed off with Tuwaiq Academy and
+Digital Saudi alone. `Assets/logos2-04.png` is the current row — Site, Digital
+Saudi, Tuwaiq Academy, HUMAIN under their Arabic and English heading — and it is
+set in place of the designed lockup, keeping the design's own right-hand margin
+and growing left as far as the PIF mark allows. Drop a new file in under that
+name and re-run to change the partners again.
+
+Re-run `python3 tools/prepare.py` whenever anything in `Assets/` changes. Each
+run stamps the manifest with a build id that every artwork URL carries, so the
+new plates reach the screens immediately — without it they would sit on the
+previous ones for a day, and a media server's embedded browser would never look
+again at all.
 
 ## How the screens stay in sync
 

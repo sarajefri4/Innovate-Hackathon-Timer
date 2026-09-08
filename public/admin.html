@@ -101,6 +101,11 @@
   #preview .pslot{position:absolute}
   #preview .pslot svg{width:100%;height:100%}
   #preview .pslot path{fill:var(--pv,#fff)}
+  /* The unit words are drawn, not part of the artwork, so the preview has to
+     draw them too or it shows three unlabelled numbers. */
+  #preview .punit{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
+    text-align:center;white-space:nowrap;line-height:1;font-weight:300;
+    letter-spacing:.09em;text-indent:.09em;color:var(--pv,#fff)}
   #pvState{display:flex;justify-content:space-between;gap:10px;margin-top:11px;
            font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
   #pvClock{font-size:30px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.01em;margin-top:10px}
@@ -354,8 +359,11 @@
   if (KEY) unlock(KEY, true); else $('keyInput').focus();
 
   // ---- artwork -----------------------------------------------------------
-  let screens = {}, menu = {}, state = null, current = null, pvSlots = [], pickerProgram = null;
+  let screens = {}, menu = {}, state = null, current = null, pvSlots = [], pvLabels = [], pickerProgram = null;
+  // Artwork URLs carry the build stamp — see the same note in display.html.
+  let art = (u) => '/' + u;
   fetch('/screens.json').then((r) => r.json()).then((d) => {
+    if (d.rev) art = (u) => '/' + u + '?v=' + d.rev;
     for (const s of d.screens) screens[s.id] = s;
     menu = d.menu;
     refreshScreens();
@@ -381,13 +389,37 @@
     });
   }
 
+  /** The drawn unit words are sized off the preview's own height. */
+  function sizePreviewUnits() {
+    const h = $('preview').getBoundingClientRect().height;
+    for (const lab of pvLabels) {
+      const el = lab.querySelector('.punit');
+      el.style.fontSize = Math.max(4, h * parseFloat(lab.style.height) / 100 / 0.72) + 'px';
+    }
+  }
+  addEventListener('resize', sizePreviewUnits);
+
   function paintPreview() {
     const s = screens[state.screen];
     if (!s || current === s) return;
     current = s;
-    $('pvPlate').src = '/' + s.src;
+    $('pvPlate').src = art(s.src);
     $('preview').style.setProperty('--pv', s.accent);
     $('preview').querySelectorAll('.pslot').forEach((n) => n.remove());
+    pvLabels = [];
+    // Cover the designed unit words, as the wall does — the live rows sit
+    // somewhere else now, so leaving them would show two sets.
+    for (const p of s.patches || []) {
+      const el = document.createElement('div');
+      el.className = 'pslot';
+      el.style.left = p.x * 100 + '%';
+      el.style.top = p.y * 100 + '%';
+      el.style.width = p.w * 100 + '%';
+      el.style.height = p.h * 100 + '%';
+      el.innerHTML = '<img src="' + art(p.src) + '" alt="" style="width:100%;height:100%;display:block">';
+      $('preview').appendChild(el);
+    }
+    $('pvPlate').onload = sizePreviewUnits;
     pvSlots = s.slots.map((slot) => {
       const el = document.createElement('div');
       el.className = 'pslot';
@@ -397,6 +429,17 @@
       el.style.height = slot.h * 100 + '%';
       el.innerHTML = '<svg preserveAspectRatio="xMidYMid meet"><path/></svg>';
       $('preview').appendChild(el);
+      if (slot.label) {
+        const lab = document.createElement('div');
+        lab.className = 'pslot';
+        lab.style.left = '0';
+        lab.style.width = '100%';
+        lab.style.top = slot.label.y * 100 + '%';
+        lab.style.height = slot.label.h * 100 + '%';
+        lab.innerHTML = '<div class="punit">' + slot.unit.toUpperCase() + '</div>';
+        $('preview').appendChild(lab);
+        pvLabels.push(lab);
+      }
       return { slot, svg: el.querySelector('svg'), path: el.querySelector('path') };
     });
   }
@@ -481,7 +524,7 @@
     if (!state || !current) return;
     const ms = clock.remaining(state);
     const done = state.status === 'finished';
-    const faces = Screen7.faces(ms, current.slots.length);
+    const faces = Screen7.faces(ms, current.slots.map((x) => x.unit));
 
     pvSlots.forEach((s, i) => {
       const face = faces[i];
