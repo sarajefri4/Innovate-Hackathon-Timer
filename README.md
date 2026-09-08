@@ -14,8 +14,8 @@ The first run prepares the artwork (about a minute — see *How the screens are
 built* below), then prints the URLs and the passkey:
 
 ```
-Column screens →  http://192.168.1.24:3000/display
-HD screens     →  http://192.168.1.24:3000/display
+Column screens →  http://192.168.1.24:3000/column
+HD screens     →  http://192.168.1.24:3000/display?mode=hd
 Admin          →  http://192.168.1.24:3000/admin
 Passkey        →  INNOVATE
 ```
@@ -29,8 +29,9 @@ needed again.
 ## On the day
 
 1. Run the server on one laptop, kept awake and on the venue wifi.
-2. Open `/display` on every column screen, TV, projector and laptop. Click once
-   on each — that goes fullscreen and enables the countdown sound.
+2. Open `/column` on every column screen and LED processor, and
+   `/display?mode=hd` on any TV, projector or laptop. Click once on each — that
+   goes fullscreen and enables the countdown sound.
 3. Open `/admin` on your own machine and enter the passkey.
 
 Every screen must be on the same network as the server.
@@ -93,7 +94,29 @@ Keyboard on the admin page: `Space` start/pause, `R` reset, `←` `→` ∓1 min
 Keyboard on a display: `F` fullscreen, `S` sound, `C` / `H` force a layout,
 `D` diagnostics.
 
-## The two layouts
+## The layouts
+
+### `/column` — the URL for the column screens
+
+```
+http://<server>:3000/column
+```
+
+Point every column screen and every LED processor at this. It forces the column
+layout, filling the frame, and **nothing overrides it** — not `?mode=hd`, not
+`?fit=`, not the admin page's screen-shape settings. There is nothing left to
+negotiate and nothing to get wrong.
+
+It is deliberately a different path from `/display`, which matters twice over.
+A media server's embedded browser cannot be holding a cached copy of a path it
+has never fetched, so pointing a layer at `/column` forces a fresh page. And on
+a server that has not been restarted since the update, `/column` returns 404
+rather than quietly serving a stale page — so it tells you which of the two
+problems you have.
+
+`/display` is the same page with everything still negotiable, described below.
+
+## What each layout is
 
 A display shows the **column** layout — the artwork exactly as designed — unless
 it is told otherwise. The other one is the **HD** layout, which takes the column

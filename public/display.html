@@ -175,12 +175,22 @@
   const forced = params.get('mode');
   let mode = forced === 'hd' || forced === 'column' ? forced : null;
 
+  // /column — the URL with nothing to get wrong. It is a *different path* from
+  // /display, so an embedded browser that is holding a cached copy of the old
+  // page cannot serve one for it: the request has to go to the server. And it
+  // hard-codes the column, filling the frame, ignoring the admin settings, the
+  // frame's shape and every query parameter. Point an LED processor at this and
+  // there is nothing left to negotiate.
+  const COLUMN_ROUTE = location.pathname.replace(/\/+$/, '') === '/column';
+  if (COLUMN_ROUTE) mode = 'column';
+
   // ?fit=fill stretches the artwork over the whole frame instead of
   // letterboxing it. Use it whenever something downstream — an LED processor,
   // or a media server such as Kompass FX3 — owns the geometry: it renders this
   // page at a canvas size of its own and maps that canvas onto the panel, so
   // the page's job is simply to paint the design corner to corner.
-  const fit = (params.get('fit') || '').toLowerCase();
+  let fit = (params.get('fit') || '').toLowerCase();
+  if (COLUMN_ROUTE) fit = 'fill';
   let debug = params.has('debug');
 
   /** The declared shape of the wall, width / height. */
@@ -285,8 +295,9 @@
     const ratio = (innerWidth / innerHeight);
     const art = s ? s.w / s.h : NaN;
     $('debug').textContent = [
-      'build    ' + BUILD + (state && state.panelFill != null ? '  server: shape ok'
-                                                              : '  server: OLD, restart it'),
+      'build    ' + BUILD + (COLUMN_ROUTE ? '  /column' : '  /display')
+                          + (state && state.panelFill != null ? '  server ok'
+                                                              : '  server OLD'),
       'frame    ' + innerWidth + ' x ' + innerHeight + ' css px  (dpr ' + devicePixelRatio + ')',
       'device   ' + screen.width + ' x ' + screen.height,
       'ratio    1 : ' + (1 / ratio).toFixed(3) + (ratio > 1 ? '  (landscape)' : ''),

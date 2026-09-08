@@ -4,7 +4,8 @@
  *
  * Run:  node server.js  [--port 3000]  [--key INNOVATE]
  *
- * Displays open  http://<this-machine-ip>:3000/display
+ * Columns open   http://<this-machine-ip>:3000/column
+ * Other screens  http://<this-machine-ip>:3000/display?mode=hd
  * Admin opens    http://<this-machine-ip>:3000/admin   (passkey required)
  *
  * Sync design: the server never streams a ticking number. It broadcasts an
@@ -387,6 +388,11 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
   if (route === '/display') return serveStatic(res, 'display.html');
+  // The same page on a second path. A media server's embedded browser cannot
+  // have a cached entry for a path it has never fetched, so this is also the
+  // way to be certain a display is running the current file — on an old server
+  // it 404s instead of quietly showing a stale page.
+  if (route === '/column') return serveStatic(res, 'display.html');
   if (route === '/admin') return serveStatic(res, 'admin.html');
   if (route === '/screen.js') return serveStatic(res, 'screen.js');
   if (route.startsWith('/screens/')) return serveStatic(res, route);
@@ -451,12 +457,12 @@ server.listen(PORT, '0.0.0.0', () => {
   const line = '─'.repeat(54);
   console.log('\n  ⏱  HACKATHON TIMER');
   console.log('  ' + line);
-  console.log('  Column screens →  http://' + host + ':' + PORT + '/display');
-  console.log('  HD screens     →  http://' + host + ':' + PORT + '/display');
+  console.log('  Column screens →  http://' + host + ':' + PORT + '/column');
+  console.log('  HD screens     →  http://' + host + ':' + PORT + '/display?mode=hd');
   console.log('  Admin          →  http://' + host + ':' + PORT + '/admin');
   console.log('  Passkey        →  ' + PASSKEY);
   console.log('  ' + line);
   if (addrs.length > 1) console.log('  Other addresses: ' + addrs.slice(1).join(', '));
-  console.log('  A display picks its own layout from the shape of the screen.');
-  console.log('  Force it with ?mode=column or ?mode=hd.  Ctrl+C to stop.\n');
+  console.log('  /column forces the column layout and cannot be overridden —');
+  console.log('  use it for LED processors and media servers.  Ctrl+C to stop.\n');
 });

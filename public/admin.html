@@ -151,12 +151,14 @@
         <h3>Point screens here</h3>
         <code id="displayUrl">…</code>
         <div class="row tight" style="margin-top:10px">
-          <button class="grow mini" id="btnCopy">Copy link</button>
+          <button class="grow mini" id="btnCopy">Copy column link</button>
           <button class="grow mini" id="btnCopyHd">Copy HD link</button>
         </div>
         <div class="sub" style="margin-top:9px">
-          A screen picks its layout from the shape set below; the HD link forces
-          the landscape one for a TV or a laptop.
+          <b style="color:var(--fg)">/column</b> is the one for the column
+          screens and LED processors — it forces the column layout, filling the
+          frame, whatever anything else says. The HD link forces the landscape
+          layout for a TV or a laptop.
         </div>
       </div>
 
@@ -605,13 +607,14 @@
   });
 
   const displayUrl = location.origin + '/display';
-  $('displayUrl').textContent = displayUrl;
-  $('openDisplay').onclick = () => window.open(displayUrl, '_blank');
+  const columnUrl = location.origin + '/column';
+  $('displayUrl').textContent = columnUrl;
+  $('openDisplay').onclick = () => window.open(columnUrl, '_blank');
   const copy = async (url) => {
     try { await navigator.clipboard.writeText(url); toast('Link copied'); }
     catch { toast(url); }
   };
-  $('btnCopy').onclick = () => copy(displayUrl);
+  $('btnCopy').onclick = () => copy(columnUrl);
   $('btnCopyHd').onclick = () => copy(displayUrl + '?mode=hd');
 
   // ---- screen shape -------------------------------------------------------
