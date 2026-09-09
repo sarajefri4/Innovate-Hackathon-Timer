@@ -362,19 +362,32 @@
   let screens = {}, menu = {}, state = null, current = null, pvSlots = [], pvLabels = [], pickerProgram = null;
   // Artwork URLs carry the build stamp — see the same note in display.html.
   let art = (u) => '/' + u;
-  fetch('/screens.json').then((r) => r.json()).then((d) => {
-    // Without a stamp the server predates this and its artwork would be
-    // served from cache for a day; a per-load stamp costs a re-download and
-    // is always right, which on a wall is the better trade.
-    art = (u) => '/' + u + '?v=' + (d.rev || Date.now());
-    for (const s of d.screens) screens[s.id] = s;
-    menu = d.menu;
-    refreshScreens();
-  });
+  function loadScreens() {
+    return fetch('/screens.json', { cache: 'no-store' }).then((r) => r.json()).then((d) => {
+      // Without a stamp the server predates this and its artwork would be
+      // served from cache for a day; a per-load stamp costs a re-download and
+      // is always right, which on a wall is the better trade.
+      art = (u) => '/' + u + '?v=' + (d.rev || Date.now());
+      for (const s of d.screens) screens[s.id] = s;
+      menu = d.menu;
+      pickerProgram = null;          // rebuild it — the running order may differ
+      refreshScreens();
+    }).catch(() => {});
+  }
+  loadScreens();
 
   /** Keep the picker and the preview in step with whatever is showing. */
+  let unknownScreen = null;
   function refreshScreens() {
     if (!state || !menu[state.program]) return;
+    // A screen with no artwork here: read the list again rather than leaving a
+    // picker that is missing screens the server can serve. Once per id, so an
+    // id the server has no artwork for cannot fetch on every heartbeat.
+    if (!screens[state.screen]) {
+      if (unknownScreen !== state.screen) { unknownScreen = state.screen; loadScreens(); }
+    } else {
+      unknownScreen = null;
+    }
     if (pickerProgram !== state.program) { pickerProgram = state.program; buildPicker(); }
     $('screenPicker').querySelectorAll('.screen').forEach((b) =>
       b.classList.toggle('on', b.dataset.screen === state.screen));
@@ -383,9 +396,9 @@
 
   function buildPicker() {
     const list = menu[state.program] || [];
-    $('screenPicker').innerHTML = list.map((id) => {
+    $('screenPicker').innerHTML = list.filter((id) => screens[id]).map((id) => {
       const s = screens[id];
-      return `<button class="screen" data-screen="${id}"><img src="/${s.src}" alt=""><span>${s.name}</span></button>`;
+      return `<button class="screen" data-screen="${id}"><img src="${art(s.src)}" alt=""><span>${s.name}</span></button>`;
     }).join('');
     $('screenPicker').querySelectorAll('.screen').forEach((b) => {
       b.onclick = () => control('screen', { screen: b.dataset.screen });

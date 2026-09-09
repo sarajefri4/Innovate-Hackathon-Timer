@@ -249,16 +249,21 @@
   // server's embedded browser would never look again at all.
   let art = (u) => '/' + u;
 
-  fetch('/screens.json').then((r) => r.json()).then((d) => {
-    // Without a stamp the server predates this and its artwork would be
-    // served from cache for a day; a per-load stamp costs a re-download and
-    // is always right, which on a wall is the better trade.
-    art = (u) => '/' + u + '?v=' + (d.rev || Date.now());
-    for (const s of d.screens) screens[s.id] = s;
-    // Warm the cache so switching screens is instant on the night.
-    for (const s of d.screens) { const i = new Image(); i.src = art(s.src); }
-    if (state) paint();
-  });
+  /** Read the list of screens. Called again if a screen is ever asked for that
+      this page has never heard of — see paint(). */
+  function loadScreens() {
+    return fetch('/screens.json', { cache: 'no-store' }).then((r) => r.json()).then((d) => {
+      // Without a stamp the server predates this and its artwork would be
+      // served from cache for a day; a per-load stamp costs a re-download and
+      // is always right, which on a wall is the better trade.
+      art = (u) => '/' + u + '?v=' + (d.rev || Date.now());
+      for (const s of d.screens) screens[s.id] = s;
+      // Warm the cache so switching screens is instant on the night.
+      for (const s of d.screens) { const i = new Image(); i.src = art(s.src); }
+      if (state) paint();
+    }).catch(() => { /* offline — the next state broadcast tries again */ });
+  }
+  loadScreens();
 
   /** Should the plate fill the frame rather than sit letterboxed inside it? */
   function shouldFill(s) {
@@ -341,9 +346,22 @@
 
   /** Rebuild the live overlays for whichever screen is showing. */
   let lastPanel = null;
+  let unknownScreen = null;
   function paint() {
     const s = screens[state.screen];
-    if (!s) return;
+    if (!s) {
+      // A screen this page has no artwork for. It happens when screens are
+      // added — a new manifest, an admin that can pick them — and this display
+      // is still holding the list it fetched when it was opened, which a media
+      // server's embedded browser will do for as long as it is left running.
+      // Quietly leaving the previous screen up is exactly how a pick looks
+      // like it "does nothing" on the wall, so read the list again and paint
+      // what was asked for. Once per id: an id the server really doesn't have
+      // must not turn into a fetch on every heartbeat.
+      if (unknownScreen !== state.screen) { unknownScreen = state.screen; loadScreens(); }
+      return;
+    }
+    unknownScreen = null;
     // The shape is broadcast like everything else, so a correction made on the
     // admin page during the event lands on every wall without touching them.
     const panel = state.panelW + 'x' + state.panelH + (state.panelFill ? 'F' : '');

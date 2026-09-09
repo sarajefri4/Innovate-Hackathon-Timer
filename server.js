@@ -213,7 +213,14 @@ function applyAction(action, payload = {}) {
       // Picking a screen never disturbs the clock — that is the whole point of
       // having the two controls separate.
       const id = String(payload.screen || '');
-      if (MENU[state.program].includes(id)) state.screen = id;
+      // Say so when the pick is refused. A silent no-op here reads on the wall
+      // as a button that does nothing, and the reason is always worth knowing:
+      // either the screen belongs to the other program, or this server was
+      // started before the artwork it names was prepared.
+      if (!MENU[state.program].includes(id)) {
+        return { ok: false, error: 'This server has no screen "' + id + '" in ' + state.program + ' — restart it if the artwork is new.' };
+      }
+      state.screen = id;
       break;
     }
 
